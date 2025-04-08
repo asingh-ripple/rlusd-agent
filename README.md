@@ -16,6 +16,13 @@ The system follows a modern microservices architecture:
 - **Blockchain Layer**: Temporal Activity that runs interaction with the blockchain
 - **Data Layer**: Structured data models for customers and transactions in the blockchain
 
+## Agentic Workflow
+
+1. **Analyze Request**: The agent analyzes the request and creates a search query
+2. **Create searh**: It peruses search results and determines aid response
+3. **Structured Response**: Another model reads the response from the agent and chagnes it into a structured JSON
+4. **Validation**: Finally, a validation model reads the response and asserts if the agent's response is indeed valid
+
 ## Installation
 
 ### Prerequisites
@@ -190,3 +197,20 @@ The disaster analysis request and response include the following fields:
 - **confidenceScore**: Percentage of how confident the model is in its decision (0-100, 2 decimal precision)
 - **isValid**: Boolean indicating if the response is valid
 - **validationReasoning**: Explanation of why the response is valid or invalid
+
+## Screenshots
+
+### System Architecture
+
+![Crisis Monitoring Workflow](images/disaster_monitor_workflow.png)
+_Figure 1: High-level workflow of the Crisis Monitoring System_
+
+### Workflows
+
+![Workflows](images/workflow_table.png)
+_Figure 2: Temporal workflow table showing a record of past runs, identified by location and sender ID_
+
+### Workflow Output
+
+![Workflow Output](images/workflow_result.png)
+_Figure 3: Run result of a temporal workflow, showing response of the agent_
