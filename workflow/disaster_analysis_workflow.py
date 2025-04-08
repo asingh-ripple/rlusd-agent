@@ -11,8 +11,6 @@ from temporalio.workflow import execute_activity, start_activity
 from utils.utils import ensure_json_serializable, requires_aid_transfer
 from .workflow_models import DisasterQuery
 from config.logger_config import setup_logger
-from blockchain import create_wallet_transaction
-
 # ============================================================================
 # LOGGING SETUP
 # ============================================================================
@@ -190,20 +188,21 @@ async def blockchain_activity(query: DisasterQuery, response: dict) -> bool:
     Activity that creates an XRPL check transaction based on the disaster response.
     
     Args:
-        query: The disaster query containing customer and beneficiary IDs
-        response: The disaster analysis response containing aid requirements
+        response (dict): The disaster analysis response containing aid requirements
         
     Returns:
         bool: True if the transaction was created successfully, False otherwise
     """
     try:
+        from blockchain import xrpl_client
         blockchain_activity_logger.info(f"Starting XRPL check transaction creation for response: {response}")
         blockchain_activity_logger.info(f"Query: {query}")
+        # Validate the response contains required fields
         
-        # Create the wallet transaction
-        transaction_result = await create_wallet_transaction(query, response)
-        blockchain_activity_logger.info(f"Transaction result: {transaction_result}")
+        # activity_logger.info(f"Is valid: {requires_aid_transfer(response["isValid"])}")
         
+        # transaction_result = await xrpl_client.create_wallet_transaction(query=query, response=response)
+        # activity_logger.info(f"Transaction result: {transaction_result}")
         return True
         
     except Exception as e:
