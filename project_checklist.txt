@@ -1,0 +1,5 @@
+1. Use agentic flow to poll news information ✅
+2. Get RLUSD from the faucet to a wallet 🚫
+3. Create escrow from rlusd wallet: 🚧
+4. Use agent to call function that creates escrow
+5. Integrate with local LLM
