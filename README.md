@@ -202,7 +202,7 @@ The disaster analysis request and response include the following fields:
 
 ### System Architecture
 
-![Crisis Monitoring Workflow](images/disaster_monitor_workflow.png)
+![Crisis Monitoring Workflow](charts/disaster_monitor_workflow.png)
 _Figure 1: High-level workflow of the Crisis Monitoring System_
 
 ### Workflows
