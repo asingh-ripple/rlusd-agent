@@ -4,13 +4,13 @@ import logging
 import sys
 
 from temporalio import workflow, activity
-from temporalio.common import RetryPolicy
 from temporalio.workflow import execute_activity, start_activity
 
 # Import from project root
 from utils.utils import ensure_json_serializable, requires_aid_transfer
 from .workflow_models import DisasterQuery
 from config.logger_config import setup_logger
+from config.workflow_config import ACTIVITY_RETRY_POLICY, ACTIVITY_TIMEOUTS
 
 
 # ============================================================================
@@ -25,6 +25,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 # Set up logging for activities
 disaster_activity_logger = setup_logger("analyze_disaster_activity")
 blockchain_activity_logger = setup_logger("blockchain_activity")
+
 # ============================================================================
 # WORKFLOW DEFINITION
 # ============================================================================
@@ -53,32 +54,27 @@ class DisasterMonitorWorkflow:
         try:
             logger.info(f"Starting workflow for customer {query.customer_id}")
             
-            # Execute the disaster analysis activity and get the result
+            # Execute the disaster analysis activity with retry policy
             analysis_result = await execute_activity(
                 analyze_disaster_activity,
                 query,
-                start_to_close_timeout=timedelta(minutes=5)
+                start_to_close_timeout=ACTIVITY_TIMEOUTS["disaster_analysis"],
+                retry_policy=ACTIVITY_RETRY_POLICY
             )
 
             logger.info(f"ANALYSIS RESULT: {analysis_result}")
             
-            # Start the XRPL check transaction as a separate activity
-            # This will run after the analysis result is returned
+            # Start the XRPL check transaction with retry policy
             try:
                 await start_activity(
                     blockchain_activity,
-                    args=[query, analysis_result],  # Pass arguments as a list
-                    start_to_close_timeout=timedelta(seconds=300),
-                    retry_policy=RetryPolicy(
-                        initial_interval=timedelta(seconds=1),
-                        maximum_interval=timedelta(seconds=10),
-                        maximum_attempts=3
-                    )
+                    args=[query, analysis_result],
+                    start_to_close_timeout=ACTIVITY_TIMEOUTS["blockchain"],
+                    retry_policy=ACTIVITY_RETRY_POLICY
                 )
             except Exception as e:
                 logger.error(f"Failed to start blockchain activity: {str(e)}")
             
-            # Return the analysis result immediately
             return analysis_result
             
         except Exception as e:
