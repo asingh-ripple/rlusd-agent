@@ -104,41 +104,39 @@ async def analyze_disaster(request: DisasterRequest):
         # Handle any errors that occur during processing
         raise HTTPException(status_code=500, detail=f"Error processing request: {str(e)}")
 
-@app.get("/payment-trace/{customer_id}", response_model=List[ConsolidatedEdgeResponse])
-async def get_payment_trace(customer_id: str, max_depth: Optional[int] = 10):
+@app.get("/customers/{customer_id}/payment-traces", response_model=List[ConsolidatedEdgeResponse])
+async def get_payment_traces(customer_id: str, max_depth: int = 10):
     """
-    Get all consolidated payment edges for a customer up to a specified depth.
+    Get consolidated payment edges for a customer and their network.
     
     Args:
-        customer_id: The ID of the customer to get payment edges for
+        customer_id: The ID of the customer to trace payments for
         max_depth: Maximum depth to traverse (default: 10)
         
     Returns:
-        List of consolidated payment edges as JSON
+        List of consolidated payment edges
+        
+    Raises:
+        HTTPException: If there's an error getting payment edges
     """
     try:
-        # Get all consolidated edges
         edges = await get_all_consolidated_edges(customer_id, max_depth)
-        
-        # Convert edges to response format
-        response = []
-        for edge in edges:
-            response.append(ConsolidatedEdgeResponse(
+        return [
+            ConsolidatedEdgeResponse(
                 sender=edge.sender,
                 receiver=edge.receiver,
                 payment_type=edge.payment_type,
                 amounts=edge.amounts,
                 hashes=edge.hashes,
                 fees=edge.fees,
-                timestamps=[ts.isoformat() for ts in edge.timestamps],
+                timestamps=edge.timestamps,
                 total_amount=edge.total_amount,
-                first_transaction_timestamp=edge.first_transaction_timestamp.isoformat(),
-                last_transaction_timestamp=edge.last_transaction_timestamp.isoformat(),
-                total_transactions=len(edge.amounts)
-            ))
-        
-        return response
-    
+                first_transaction_timestamp=edge.first_transaction_timestamp,
+                last_transaction_timestamp=edge.last_transaction_timestamp,
+                total_transactions=edge.total_transactions
+            )
+            for edge in edges
+        ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting payment edges: {str(e)}")
 
