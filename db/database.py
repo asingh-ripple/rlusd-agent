@@ -440,12 +440,15 @@ class Database:
         finally:
             session.close()
 
-    def get_customers(self) -> List[Customer]:
+    def get_all_customers(self) -> List[Customer]:
         """
         Get all customers.
         """
-        session = self.Session()
-        return session.query(Customer).all()
+        try:
+            session = self.Session()
+            return session.query(Customer).all()
+        finally:
+            session.close()
     
     def get_customer_transactions(self, customer_id: str) -> List[Transaction]:
         """
@@ -471,6 +474,8 @@ class Database:
         """
         customer = self.get_customer(customer_id)
         return customer.wallet_seed
+    
+    
     
 
 # Module-level database instance

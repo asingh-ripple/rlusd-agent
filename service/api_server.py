@@ -4,7 +4,8 @@ import uvicorn
 from workflow.temporal_client import execute_disaster_workflow
 from blockchain.traces import get_all_consolidated_edges
 from typing import List, Optional
-
+from db.database import get_db
+from enum import Enum
 # ============================================================================
 # API SERVER SETUP
 # ============================================================================
@@ -22,6 +23,10 @@ app = FastAPI(
 # DATA MODELS
 # ============================================================================
 # Define the structure of incoming requests and outgoing responses
+
+class CustomerType(Enum):
+    SENDER = "SENDER"
+    RECEIVER = "RECEIVER"
 
 class DisasterRequest(BaseModel):
     customer_id: str
@@ -45,6 +50,21 @@ class ConsolidatedEdgeResponse(BaseModel):
     first_transaction_timestamp: str
     last_transaction_timestamp: str
     total_transactions: int
+
+class CustomerResponse(BaseModel):
+    customer_id: str
+    email_address: str
+    wallet_address: str
+
+class CustomersResponse(BaseModel):
+    customers: List[CustomerResponse]
+
+class CreateCustomerRequest(BaseModel):
+    customer_id: str
+    wallet_seed: str
+    customer_type: CustomerType
+    email_address: str
+    wallet_address: str
 
 # ============================================================================
 # API ENDPOINTS
@@ -122,6 +142,92 @@ async def get_payment_trace(customer_id: str, max_depth: Optional[int] = 10):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting payment edges: {str(e)}")
 
+@app.get("/customers/{customer_id}", response_model=CustomerResponse)
+async def get_customer(customer_id: str):
+    """
+    Get customer details by ID.
+    
+    Args:
+        customer_id: The ID of the customer to retrieve
+        
+    Returns:
+        Customer details including ID, name, email, and wallet address
+        
+    Raises:
+        HTTPException: If customer is not found
+    """
+    try:
+        customer = get_db().get_customer(customer_id)
+        if not customer:
+            raise HTTPException(status_code=404, detail="Customer not found")
+            
+        return CustomerResponse(
+            customer_id=customer.customer_id,
+            email_address=customer.email_address,
+            wallet_address=customer.wallet_address,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving customer: {str(e)}")
+
+@app.get("/customers", response_model=CustomersResponse)
+async def get_all_customers():
+    """
+    Get all customers in the system.
+    
+    Returns:
+        List of all customers with their details
+        
+    Raises:
+        HTTPException: If there's an error retrieving customers
+    """
+    try:
+        customers = get_db().get_all_customers()
+        if not customers:
+            return CustomersResponse(customers=[])
+            
+        return CustomersResponse(
+            customers=[
+                CustomerResponse(
+                    customer_id=customer.customer_id,
+                    email_address=customer.email_address,
+                    wallet_address=customer.wallet_address
+                )
+                for customer in customers
+            ]
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving customers: {str(e)}")
+
+@app.post("/customer", response_model=CustomerResponse)
+async def create_customer(customer: CreateCustomerRequest):
+    """
+    Create a new customer.
+    
+    Args:
+        customer: Customer details including ID, email, and wallet address
+        
+    Returns:
+        Created customer details
+        
+    Raises:
+        HTTPException: If there's an error creating the customer
+    """
+    try:
+        # Insert customer into database
+        get_db().insert_customer(
+            customer_id=customer.customer_id,
+            email_address=customer.email_address,
+            wallet_address=customer.wallet_address
+        )
+        
+        # Return the created customer details
+        return CustomerResponse(
+            customer_id=customer.customer_id,
+            email_address=customer.email_address,
+            wallet_address=customer.wallet_address
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating customer: {str(e)}")
 
 @app.get("/health")
 async def health_check():

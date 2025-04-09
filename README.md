@@ -79,7 +79,7 @@ Note: You may run into conflicts with pydantic, langgraph, and temporal that you
 
 ## Usage
 
-### API Endpoints
+### Crisis Monitoring
 
 #### Analyze Disaster
 
@@ -134,15 +134,55 @@ Response:
 }
 ```
 
+## API Endpoints
+
 ### Customer Management
 
-- `POST /customers`: Create a new customer
+- `POST /customer`: Create a new customer
 
-  - Request body: `{ "name": "string", "email": "string" }`
-  - Response: `{ "id": "string", "name": "string", "email": "string", "wallet_address": "string" }`
+  - Request body:
+    ```json
+    {
+      "customer_id": "string",
+      "wallet_seed": "string",
+      "customer_type": "SENDER" | "RECEIVER",
+      "email_address": "string",
+      "wallet_address": "string"
+    }
+    ```
+  - Response:
+    ```json
+    {
+      "customer_id": "string",
+      "email_address": "string",
+      "wallet_address": "string"
+    }
+    ```
 
 - `GET /customers/{customer_id}`: Get customer details
-  - Response: `{ "id": "string", "name": "string", "email": "string", "wallet_address": "string" }`
+
+  - Response:
+    ```json
+    {
+      "customer_id": "string",
+      "email_address": "string",
+      "wallet_address": "string"
+    }
+    ```
+
+- `GET /customers`: Get all customers
+  - Response:
+    ```json
+    {
+      "customers": [
+        {
+          "customer_id": "string",
+          "email_address": "string",
+          "wallet_address": "string"
+        }
+      ]
+    }
+    ```
 
 ### Payment Tracing
 
