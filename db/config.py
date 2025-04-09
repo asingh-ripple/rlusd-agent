@@ -3,20 +3,15 @@ Database configuration settings.
 """
 
 import os
-from typing import Optional
+from pathlib import Path
 
-# Database connection settings
-DB_HOST: str = os.getenv("DB_HOST", "localhost")
-DB_PORT: str = os.getenv("DB_PORT", "5432")
-DB_NAME: str = os.getenv("DB_NAME", "disaster_monitor")
-DB_USER: str = os.getenv("DB_USER", "postgres")
-DB_PASSWORD: str = os.getenv("DB_PASSWORD", "postgres")
+# Database settings
+DB_NAME = "disaster_monitor.db"
+DB_DIR = Path("data")
+DB_PATH = DB_DIR / DB_NAME
 
-def get_connection_string() -> str:
-    """
-    Get the database connection string.
-    
-    Returns:
-        str: PostgreSQL connection string
-    """
-    return f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}" 
+# Create data directory if it doesn't exist
+DB_DIR.mkdir(exist_ok=True)
+
+# SQLite connection string
+SQLITE_URL = f"sqlite:///{DB_PATH}" 

@@ -4,7 +4,7 @@ Database module for managing application data.
 
 from typing import Optional, List
 from enum import Enum
-from sqlalchemy import create_engine, Column, String, ForeignKey, Enum as SQLEnum, Numeric, event, DateTime
+from sqlalchemy import create_engine, Column, String, ForeignKey, Enum as SQLEnum, Numeric, event, DateTime, Integer
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.engine import Engine
@@ -43,12 +43,16 @@ class TransactionStatus(str, Enum):
     FAILED = "FAILED"
 
 class Customer(Base):
-    """Customer model for storing wallet information."""
+    """Customer model for storing customer information."""
     __tablename__ = "customers"
 
-    customer_id = Column(String, primary_key=True)
-    wallet_seed = Column(String, nullable=False)
-    customer_type = Column(SQLEnum(CustomerType), nullable=False)
+    customer_id = Column(String(50), primary_key=True, index=True)
+    wallet_seed = Column(String(128))
+    wallet_address = Column(String(128), nullable=True)  # Renamed from public_key
+    email_address = Column(String(255), nullable=True)  # Added email_address
+    customer_type = Column(SQLEnum(CustomerType))
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
     sent_transactions = relationship("CustomerRelationship", 
@@ -207,19 +211,28 @@ class Database:
             
     def get_customer(self, customer_id: str) -> Optional[Customer]:
         """
-        Retrieve a customer by ID.
+        Retrieve a customer by their customer_id.
         
         Args:
-            customer_id: Customer ID to look up
+            customer_id: The ID of the customer to retrieve
             
         Returns:
             Customer object if found, None otherwise
+            
+        Raises:
+            Exception: If there's an error accessing the database
         """
-        session = self.Session()
         try:
-            return session.query(Customer).filter_by(customer_id=customer_id).first()
-        finally:
-            session.close()
+            with self.Session() as session:
+                customer = session.query(Customer).filter(Customer.customer_id == customer_id).first()
+                if customer:
+                    logger.info(f"Retrieved customer {customer_id} with wallet_address {customer.wallet_address}")
+                else:
+                    logger.warning(f"Customer {customer_id} not found")
+                return customer
+        except Exception as e:
+            logger.error(f"Error retrieving customer {customer_id}: {e}")
+            raise
             
     def add_relationship(self, sender_id: str, receiver_id: str) -> None:
         """
@@ -279,7 +292,7 @@ class Database:
         finally:
             session.close()
 
-    def add_transaction(self, 
+    def insert_transaction(self, 
                        transaction_hash: str,
                        sender_id: str,
                        receiver_id: str,

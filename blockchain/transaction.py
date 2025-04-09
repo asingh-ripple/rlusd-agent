@@ -12,6 +12,7 @@ from .wallet import get_wallet_pair, get_wallet_balance
 from workflow.workflow_models import DisasterQuery
 from db.database import init_db, get_db
 from db.sqlite_config import get_connection_string
+import asyncio
 
 # Set up logging
 logger = setup_logger(__name__)
@@ -24,7 +25,7 @@ db = get_db()
 client = get_client()
 
 async def create_wallet_transaction(query: DisasterQuery, response: Dict[str, Any]) -> Dict[str, Any]:
-    """Create and execute a wallet tran
+    """Create and execute a wallet transaction.
     
     This function:
     1. Creates two test wallets using the XRPL faucet
@@ -77,6 +78,47 @@ async def create_wallet_transaction(query: DisasterQuery, response: Dict[str, An
     logger.info(f"Wallet 2 ({receiver_wallet.address}) balance: {await get_wallet_balance(receiver_wallet.address, client)}")
 
     # Insert transaction into database
-    db.insert_transaction(query.customer_id, query.beneficiary_id, payment_response.result["hash"], payment_response.result["amount"], payment_response.result["destination"])
+    # db.insert_transaction(query.customer_id, query.beneficiary_id, payment_response.result["hash"], payment_response.result["amount"], payment_response.result["destination"])
 
-    return payment_response.result 
+    return payment_response.result
+
+async def main():
+    """Main function to send money from sender-1 to receiver-2."""
+    try:
+        # Create a test query
+        query = DisasterQuery(
+            customer_id="sender-1",
+            beneficiary_id="sender-2",
+            location="Test Location",
+            query="Test query for money transfer"
+        )
+        
+        # Create a mock response
+        response = {
+            "reasoning": "Test transfer",
+            "disasterType": "test",
+            "severity": "low",
+            "location": "Test Location",
+            "status": "test",
+            "isAidRequired": True,
+            "estimatedAffected": 0,
+            "requiredAidAmount": 1000,
+            "aidCurrency": "XRP",
+            "evacuationNeeded": False,
+            "disasterDate": "2024-03-20",
+            "timestamp": "2024-03-20T00:00:00",
+            "confidenceScore": "100.00",
+            "isValid": True,
+            "validationReasoning": "Test transfer"
+        }
+        
+        # Execute the transaction
+        result = await create_wallet_transaction(query, response)
+        logger.info(f"Transaction completed successfully: {result}")
+        
+    except Exception as e:
+        logger.error(f"Error in main function: {e}")
+        raise
+
+if __name__ == "__main__":
+    asyncio.run(main()) 

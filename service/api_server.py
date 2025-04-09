@@ -2,6 +2,8 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import uvicorn
 from workflow.temporal_client import execute_disaster_workflow
+from blockchain.traces import get_all_consolidated_edges
+from typing import List, Optional
 
 # ============================================================================
 # API SERVER SETUP
@@ -30,6 +32,19 @@ class DisasterRequest(BaseModel):
 # Response model: Defines the structure of the API response
 class DisasterResponse(BaseModel):
     result: dict      # Contains the structured disaster analysis result
+
+class ConsolidatedEdgeResponse(BaseModel):
+    sender: str
+    receiver: str
+    payment_type: str
+    amounts: List[str]
+    hashes: List[str]
+    fees: List[str]
+    timestamps: List[str]
+    total_amount: str
+    first_transaction_timestamp: str
+    last_transaction_timestamp: str
+    total_transactions: int
 
 # ============================================================================
 # API ENDPOINTS
@@ -68,6 +83,45 @@ async def analyze_disaster(request: DisasterRequest):
     except Exception as e:
         # Handle any errors that occur during processing
         raise HTTPException(status_code=500, detail=f"Error processing request: {str(e)}")
+
+@app.get("/payment-trace/{customer_id}", response_model=List[ConsolidatedEdgeResponse])
+async def get_payment_trace(customer_id: str, max_depth: Optional[int] = 10):
+    """
+    Get all consolidated payment edges for a customer up to a specified depth.
+    
+    Args:
+        customer_id: The ID of the customer to get payment edges for
+        max_depth: Maximum depth to traverse (default: 10)
+        
+    Returns:
+        List of consolidated payment edges as JSON
+    """
+    try:
+        # Get all consolidated edges
+        edges = await get_all_consolidated_edges(customer_id, max_depth)
+        
+        # Convert edges to response format
+        response = []
+        for edge in edges:
+            response.append(ConsolidatedEdgeResponse(
+                sender=edge.sender,
+                receiver=edge.receiver,
+                payment_type=edge.payment_type,
+                amounts=edge.amounts,
+                hashes=edge.hashes,
+                fees=edge.fees,
+                timestamps=[ts.isoformat() for ts in edge.timestamps],
+                total_amount=edge.total_amount,
+                first_transaction_timestamp=edge.first_transaction_timestamp.isoformat(),
+                last_transaction_timestamp=edge.last_transaction_timestamp.isoformat(),
+                total_transactions=len(edge.amounts)
+            ))
+        
+        return response
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting payment edges: {str(e)}")
+
 
 @app.get("/health")
 async def health_check():
