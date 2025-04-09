@@ -134,6 +134,41 @@ Response:
 }
 ```
 
+### Customer Management
+
+- `POST /customers`: Create a new customer
+
+  - Request body: `{ "name": "string", "email": "string" }`
+  - Response: `{ "id": "string", "name": "string", "email": "string", "wallet_address": "string" }`
+
+- `GET /customers/{customer_id}`: Get customer details
+  - Response: `{ "id": "string", "name": "string", "email": "string", "wallet_address": "string" }`
+
+### Payment Tracing
+
+- `GET /trace-payment/{customer_id}`: Get consolidated payment edges for a customer and their network
+  - Query Parameters:
+    - `max_depth` (optional): Maximum depth to traverse (default: 10)
+  - Response: List of consolidated payment edges with the following structure:
+    ```json
+    [
+      {
+        "sender": "string",
+        "receiver": "string",
+        "payment_type": "string",
+        "amounts": [number],
+        "hashes": [string],
+        "fees": [number],
+        "timestamps": [string],
+        "total_amount": number,
+        "first_transaction_timestamp": "string",
+        "last_transaction_timestamp": "string",
+        "total_transactions": number
+      }
+    ]
+    ```
+  - Example usage: `GET /trace-payment/sender-1?max_depth=5`
+
 ## Development
 
 ### Project Structure
