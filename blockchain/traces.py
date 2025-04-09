@@ -83,43 +83,36 @@ async def get_all_consolidated_edges(customer_id: str, max_depth: int = 10) -> L
     Returns:
         List of all ConsolidatedPaymentEdge objects found
     """
-    all_consolidated_edges = []
-    visited_unique_receivers_set = set()
-    unique_receivers_queue = asyncio.Queue()
+    all_consolidated_edges = [] # List of all consolidated edges
+    visited_addresses = set() # Set of visited addresses
+    unique_receivers_queue = asyncio.Queue() # Queue of unique receivers
     
     # Get initial customer's wallet address
     sender_wallet_address = db.get_customer(customer_id).wallet_address
-    
-    # Get initial consolidated edges
-    initial_edges = await get_consolidated_payment_edges(sender_wallet_address)
-    if initial_edges:
-        all_consolidated_edges.extend(initial_edges)
-        
-        # Get unique receivers from initial edges
-        initial_receivers = get_unique_receivers(initial_edges)
-        if initial_receivers:
-            visited_unique_receivers_set.update(initial_receivers)
-            for receiver in initial_receivers:
-                await unique_receivers_queue.put(receiver)
+
+    # Initialize the queue with the first node to visit
+    await unique_receivers_queue.put(sender_wallet_address)
     
     # Process receivers up to max_depth
     depth = 0
     while not unique_receivers_queue.empty() and depth < max_depth:
         depth += 1
-        receiver = await unique_receivers_queue.get()
+        current_address = await unique_receivers_queue.get()
         
         # Get consolidated edges for this receiver
-        receiver_edges = await get_consolidated_payment_edges(receiver)
-        if receiver_edges:
-            all_consolidated_edges.extend(receiver_edges)
+        consolidated_payment_edges = await get_consolidated_payment_edges(current_address)
+        if consolidated_payment_edges:
+            all_consolidated_edges.extend(consolidated_payment_edges)
             
             # Get new unique receivers
-            additional_receivers = get_unique_receivers(receiver_edges)
-            if additional_receivers:
-                for additional_receiver in additional_receivers:
-                    if additional_receiver not in visited_unique_receivers_set:
-                        await unique_receivers_queue.put(additional_receiver)
-                        visited_unique_receivers_set.add(additional_receiver)
+            adjacent_nodes = get_unique_receivers(consolidated_payment_edges)
+            if adjacent_nodes:
+                for adjacent_node in adjacent_nodes:
+                    if adjacent_node not in visited_addresses:
+                        await unique_receivers_queue.put(adjacent_node)
+        
+        # Add current address to visited set
+        visited_addresses.add(current_address)
     
     return all_consolidated_edges
 
