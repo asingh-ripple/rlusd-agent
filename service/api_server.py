@@ -1,11 +1,18 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
 import uvicorn
 from workflow.temporal_client import execute_disaster_workflow
 from blockchain.traces import get_all_consolidated_edges
 from typing import List, Optional
-from db.database import get_db
+from db.database import get_db, Customer, CustomerType, CustomerDetails
 from enum import Enum
+from blockchain.payment_edge import ConsolidatedPaymentEdge
+from blockchain.balance import get_formatted_balance
+from sqlalchemy.orm import Session
+from sqlalchemy import text
+from config.logger_config import setup_logger
+
+logger = setup_logger(__name__)
 # ============================================================================
 # API SERVER SETUP
 # ============================================================================
@@ -66,6 +73,29 @@ class CreateCustomerRequest(BaseModel):
     email_address: str
     wallet_address: str
 
+class CustomerBalanceResponse(BaseModel):
+    customer_id: str
+    public_address: str
+    balance: str
+    sequence: int
+
+class CustomersBalanceResponse(BaseModel):
+    customers: List[CustomerBalanceResponse]
+
+class CustomerDetailsResponse(BaseModel):
+    customer_id: str
+    customer_type: str
+    wallet_address: Optional[str]
+    email: Optional[str]
+    name: Optional[str]
+    goal: Optional[float]
+    description: Optional[str]
+    total_donations: Optional[int]
+    amount_raised: Optional[int]
+
+    class Config:
+        from_attributes = True
+
 # ============================================================================
 # API ENDPOINTS
 # ============================================================================
@@ -104,68 +134,136 @@ async def analyze_disaster(request: DisasterRequest):
         # Handle any errors that occur during processing
         raise HTTPException(status_code=500, detail=f"Error processing request: {str(e)}")
 
-@app.get("/customers/{customer_id}/payment-traces", response_model=List[ConsolidatedEdgeResponse])
-async def get_payment_traces(customer_id: str, max_depth: int = 10):
+@app.get("/payment-trace/{customer_id}", response_model=List[ConsolidatedEdgeResponse])
+async def get_payment_trace(customer_id: str, max_depth: Optional[int] = 10):
     """
-    Get consolidated payment edges for a customer and their network.
+    Get all consolidated payment edges for a customer up to a specified depth.
     
     Args:
-        customer_id: The ID of the customer to trace payments for
+        customer_id: The ID of the customer to get payment edges for
         max_depth: Maximum depth to traverse (default: 10)
         
     Returns:
-        List of consolidated payment edges
-        
-    Raises:
-        HTTPException: If there's an error getting payment edges
+        List of consolidated payment edges as JSON
     """
     try:
+        # Get all consolidated edges
         edges = await get_all_consolidated_edges(customer_id, max_depth)
-        return [
-            ConsolidatedEdgeResponse(
+        
+        # Convert edges to response format
+        response = []
+        for edge in edges:
+            response.append(ConsolidatedEdgeResponse(
                 sender=edge.sender,
                 receiver=edge.receiver,
                 payment_type=edge.payment_type,
                 amounts=edge.amounts,
                 hashes=edge.hashes,
                 fees=edge.fees,
-                timestamps=edge.timestamps,
+                timestamps=[ts.isoformat() for ts in edge.timestamps],
                 total_amount=edge.total_amount,
-                first_transaction_timestamp=edge.first_transaction_timestamp,
-                last_transaction_timestamp=edge.last_transaction_timestamp,
-                total_transactions=edge.total_transactions
-            )
-            for edge in edges
-        ]
+                first_transaction_timestamp=edge.first_transaction_timestamp.isoformat(),
+                last_transaction_timestamp=edge.last_transaction_timestamp.isoformat(),
+                total_transactions=len(edge.amounts)
+            ))
+        
+        return response
+    
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting payment edges: {str(e)}")
 
-@app.get("/customers/{customer_id}", response_model=CustomerResponse)
-async def get_customer(customer_id: str):
+@app.get("/customers/balances", response_model=CustomersBalanceResponse)
+async def get_all_customers_balances():
     """
-    Get customer details by ID.
+    Get balances for all customers in the system.
     
-    Args:
-        customer_id: The ID of the customer to retrieve
-        
     Returns:
-        Customer details including ID, name, email, and wallet address
+        List of all customers with their balances
         
     Raises:
-        HTTPException: If customer is not found
+        HTTPException: If there's an error retrieving balances
     """
     try:
-        customer = get_db().get_customer(customer_id)
-        if not customer:
-            raise HTTPException(status_code=404, detail="Customer not found")
+        print("\nGetting all customers...")
+        customers = get_db().get_all_customers()
+        print(f"Found {len(customers) if customers else 0} customers")
+        
+        if not customers:
+            print("No customers found in database")
+            return CustomersBalanceResponse(customers=[])
             
-        return CustomerResponse(
-            customer_id=customer.customer_id,
-            email_address=customer.email_address,
-            wallet_address=customer.wallet_address,
-        )
+        balances = []
+        for customer in customers:
+            print(f"\nProcessing customer: {customer.customer_id}")
+            print(f"Wallet address: {customer.wallet_address}")
+            
+            if not customer.wallet_address:
+                print(f"Warning: Customer {customer.customer_id} has no wallet address")
+                continue
+                
+            balance_info = await get_formatted_balance(customer.wallet_address)
+            print(f"Balance info: {balance_info}")
+            
+            if balance_info:
+                balances.append(
+                    CustomerBalanceResponse(
+                        customer_id=customer.customer_id,
+                        public_address=balance_info['public_address'],
+                        balance=balance_info['balance'],
+                        sequence=balance_info['sequence']
+                    )
+                )
+                print(f"Added balance info for customer {customer.customer_id}")
+            else:
+                print(f"Warning: Could not get balance info for customer {customer.customer_id}")
+                
+        if not balances:
+            print("No balances found for any customers")
+            return CustomersBalanceResponse(customers=[])
+            
+        print(f"\nReturning balances for {len(balances)} customers")
+        return CustomersBalanceResponse(customers=balances)
+        
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error retrieving customer: {str(e)}")
+        print(f"\nError in get_all_customers_balances: {str(e)}")
+        print(f"Error type: {type(e)}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving customer balances: {str(e)}"
+        )
+
+@app.get("/customers/details", response_model=List[CustomerDetailsResponse])
+async def get_customer_details():
+    """Get all customer details with a left join between customers and customer_details tables."""
+    try:
+        # Get all customers
+        customers = get_db().get_all_customers()
+        
+        # Convert to response format
+        response = []
+        for customer in customers:
+            # Get customer details if they exist
+            details = get_db().get_customer_details(customer.customer_id)
+            
+            customer_dict = {
+                "customer_id": customer.customer_id,
+                "customer_type": customer.customer_type,
+                "wallet_address": customer.wallet_address,
+                "email": customer.email_address,
+                "name": details.name if details else None,
+                "goal": details.goal if details else None,
+                "description": details.description if details else None,
+                "total_donations": details.total_donations if details else None,
+                "amount_raised": details.amount_raised if details else None
+            }
+            response.append(customer_dict)
+        
+        return response
+    except Exception as e:
+        logger.error(f"Error retrieving customer details: {e}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving customer details: {str(e)}")
 
 @app.get("/customers", response_model=CustomersResponse)
 async def get_all_customers():
@@ -195,6 +293,43 @@ async def get_all_customers():
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving customers: {str(e)}")
+
+@app.get("/customers/{customer_id}", response_model=CustomerResponse)
+async def get_customer(customer_id: str):
+    """
+    Get customer details by ID.
+    
+    Args:
+        customer_id: The ID of the customer to retrieve
+        
+    Returns:
+        Customer details including ID, name, email, and wallet address
+        
+    Raises:
+        HTTPException: If customer is not found
+    """
+    try:
+        print(f"Attempting to get customer with ID: {customer_id}")
+        db = get_db()
+        print(f"Database instance: {db}")
+        
+        # First check if customer exists
+        customer = db.get_customer(customer_id)
+        print(f"Customer lookup result: {customer}")
+        
+        if not customer:
+            print(f"Customer {customer_id} not found in database")
+            raise HTTPException(status_code=404, detail=f"Customer {customer_id} not found")
+            
+        print(f"Found customer: {customer.customer_id}")
+        return CustomerResponse(
+            customer_id=customer.customer_id,
+            email_address=customer.email_address,
+            wallet_address=customer.wallet_address,
+        )
+    except Exception as e:
+        print(f"Error retrieving customer: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving customer: {str(e)}")
 
 @app.post("/customer", response_model=CustomerResponse)
 async def create_customer(customer: CreateCustomerRequest):

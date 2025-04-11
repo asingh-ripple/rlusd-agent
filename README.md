@@ -171,7 +171,6 @@ Response:
     ```
 
 - `GET /customers`: Get all customers
-
   - Response:
     ```json
     {
@@ -185,7 +184,9 @@ Response:
     }
     ```
 
-- `GET /customers/{customer_id}/payment-traces`: Get consolidated payment edges for a customer and their network
+### Payment Tracing
+
+- `GET /trace-payment/{customer_id}`: Get consolidated payment edges for a customer and their network
   - Query Parameters:
     - `max_depth` (optional): Maximum depth to traverse (default: 10)
   - Response: List of consolidated payment edges with the following structure:
@@ -206,7 +207,7 @@ Response:
       }
     ]
     ```
-  - Example usage: `GET /customers/sender-1/payment-traces?max_depth=5`
+  - Example usage: `GET /trace-payment/sender-1?max_depth=5`
 
 ## Development
 

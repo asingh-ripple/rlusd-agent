@@ -79,6 +79,7 @@ class Customer(Base):
                                  foreign_keys="Check.receiver_id",
                                  back_populates="receiver",
                                  cascade="all, delete-orphan")
+    details = relationship("CustomerDetails", back_populates="customer", uselist=False, cascade="all, delete-orphan")
 
 class CustomerRelationship(Base):
     """Model for tracking relationships between customers."""
@@ -167,6 +168,23 @@ class Check(Base):
     sender = relationship("Customer", foreign_keys=[sender_id], back_populates="checks_sent")
     receiver = relationship("Customer", foreign_keys=[receiver_id], back_populates="checks_received")
 
+class CustomerDetails(Base):
+    """Model for storing additional customer details."""
+    __tablename__ = "customer_details"
+
+    customer_id = Column(String(50), ForeignKey("customers.customer_id", ondelete="CASCADE"), primary_key=True)
+    name = Column(String(255), nullable=False)
+    goal = Column(Numeric(20, 6), nullable=False)  # 20 digits total, 6 decimal places
+    description = Column(String(500), nullable=False)
+    total_donations = Column(Integer, default=0)
+    amount_raised = Column(Integer)  # New column for tracking amount raised
+    
+    # Relationship
+    customer = relationship("Customer", back_populates="details")
+
+    def __repr__(self):
+        return f"<CustomerDetails(customer_id={self.customer_id}, name={self.name}, goal={self.goal}, amount_raised={self.amount_raised})>"
+
 class Database:
     """Database manager for wallet operations."""
     
@@ -183,7 +201,7 @@ class Database:
         # Create tables if they don't exist
         Base.metadata.create_all(self.engine)
         
-    def add_customer(self, customer_id: str, wallet_seed: str, customer_type: CustomerType) -> None:
+    def add_customer(self, customer_id: str, wallet_seed: str, customer_type: CustomerType, wallet_address: str, email_address: str) -> None:
         """
         Add a new customer to the database.
         
@@ -197,7 +215,9 @@ class Database:
             customer = Customer(
                 customer_id=customer_id,
                 wallet_seed=wallet_seed,
-                customer_type=customer_type
+                customer_type=customer_type,
+                wallet_address=wallet_address,
+                email_address=email_address
             )
             session.add(customer)
             session.commit()
@@ -446,7 +466,9 @@ class Database:
         """
         try:
             session = self.Session()
-            return session.query(Customer).all()
+            customers =  session.query(Customer).all()
+            print(f"Customers: {customers}")
+            return customers
         finally:
             session.close()
     
@@ -475,8 +497,71 @@ class Database:
         customer = self.get_customer(customer_id)
         return customer.wallet_seed
     
-    
-    
+    def insert_customer_details(self, customer_id: str, name: str, goal: float, description: str) -> None:
+        """
+        Add customer details to the database.
+        
+        Args:
+            customer_id: ID of the customer
+            name: Name of the customer/charity
+            goal: Fundraising goal amount
+            description: Description of the charity
+        """
+        session = self.Session()
+        try:
+            details = CustomerDetails(
+                customer_id=customer_id,
+                name=name,
+                goal=goal,
+                description=description,
+                total_donations=0
+            )
+            session.add(details)
+            session.commit()
+            logger.info(f"Added details for customer {customer_id}")
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Error adding customer details: {str(e)}")
+            raise
+        finally:
+            session.close()
+            
+    def get_customer_details(self, customer_id: str) -> Optional[CustomerDetails]:
+        """
+        Get customer details by ID.
+        
+        Args:
+            customer_id: ID of the customer
+            
+        Returns:
+            CustomerDetails object if found, None otherwise
+        """
+        session = self.Session()
+        try:
+            return session.query(CustomerDetails).filter_by(customer_id=customer_id).first()
+        finally:
+            session.close()
+            
+    def update_total_donations(self, customer_id: str) -> None:
+        """
+        Increment the total donations count for a customer.
+        
+        Args:
+            customer_id: ID of the customer
+        """
+        session = self.Session()
+        try:
+            details = session.query(CustomerDetails).filter_by(customer_id=customer_id).first()
+            if details:
+                details.total_donations += 1
+                session.commit()
+                logger.info(f"Updated total donations for customer {customer_id}")
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Error updating total donations: {str(e)}")
+            raise
+        finally:
+            session.close()
 
 # Module-level database instance
 _db = None
