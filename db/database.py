@@ -221,7 +221,7 @@ class Check(Base):
 class Cause(Base):
     """Model for storing causes."""
     __tablename__ = "causes"
-
+    customer_id = Column(String(50), ForeignKey("customers.customer_id", ondelete="CASCADE"), nullable=False)
     cause_id = Column(String(50), primary_key=True)
     name = Column(String(255), nullable=False)
     description = Column(String, nullable=False)
@@ -230,7 +230,7 @@ class Cause(Base):
     goal = Column(Numeric(20, 6), nullable=False)  # 20 digits total, 6 decimal places
     
     # Relationships (without customer_id foreign key for now)
-    ## customer = relationship("Customer", back_populates="details")
+    # customer = relationship("Customer", back_populates="details")
 #    donations_list = relationship("Donations", back_populates="cause")
 #    disbursements_list = relationship("Disbursements", back_populates="cause")
 
@@ -549,7 +549,7 @@ class Database:
         customer = self.get_customer(customer_id)
         return customer.wallet_seed
     
-    def insert_cause(self, cause_id: str, name: str, description: str, imageUrl: str, category: str, goal: float) -> None:
+    def insert_cause(self, cause_id: str, name: str, description: str, imageUrl: str, category: str, goal: float, customer_id: str) -> None:
         """
         Add customer details to the database.
         
@@ -567,7 +567,8 @@ class Database:
                 description=description,
                 imageUrl=imageUrl,
                 category=category,
-                goal=goal
+                goal=goal,
+                customer_id=customer_id
             )
             session.add(cause)
             session.commit()
@@ -579,21 +580,28 @@ class Database:
         finally:
             session.close()
             
-    def get_cause(self, customer_id: str) -> Optional[Cause]:
+    def get_cause(self, cause_id: str) -> Optional[Cause]:
         """
         Get cause by ID.
         
         Args:
-            customer_id: ID of the customer
+            cause_id: ID of the cause
             
         Returns:
             Cause object if found, None otherwise
         """
         session = self.Session()
         try:
-            return session.query(Cause).filter_by(customer_id=customer_id).first()
+            return session.query(Cause).filter_by(cause_id=cause_id).first()
         finally:
             session.close()
+    
+    def get_all_causes(self) -> List[Cause]:
+        """
+        Get all causes.
+        """
+        session = self.Session()
+        return session.query(Cause).all()
             
     def update_total_donations(self, customer_id: str) -> None:
         """

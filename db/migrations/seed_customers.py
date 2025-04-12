@@ -35,7 +35,7 @@ def get_existing_customers():
 # Seed data with actual customer information
 SEED_CUSTOMERS = [
     {
-        "customer_id": "sender-1",
+        "customer_id": "customer-1",
         "wallet_seed": "sEdTbvYhVumc89LPr6ajiKe13km37h3",
         "customer_type": CustomerType.SENDER,
         "wallet_address": "rQBsLAh7nQLdRJTJnCapCsbng5Eu8oTUHW",
@@ -44,25 +44,25 @@ SEED_CUSTOMERS = [
         "updated_at": datetime(2025, 4, 9, 3, 30, 29)
     },
     {
-        "customer_id": "receiver-1",
+        "customer_id": "customer-2",
         "wallet_seed": "sEd7Sok4VSed8Sw5m2z9LY2YbKLT5PG",
-        "customer_type": CustomerType.RECEIVER,
+        "customer_type": CustomerType.SENDER,
         "wallet_address": "rMQhytkyM4dwSJkmoAY3qxThRX2M2Py8wc",
         "email_address": "receiver_1@metaco.com",
         "created_at": datetime(2025, 4, 9, 3, 30, 29),
         "updated_at": datetime(2025, 4, 9, 3, 30, 29)
     },
     {
-        "customer_id": "receiver-3",
+        "customer_id": "customer-3",
         "wallet_seed": "sEdTy9zRMrgjqs7d14944UCdFxXdGix",
-        "customer_type": CustomerType.RECEIVER,
+        "customer_type": CustomerType.SENDER,
         "wallet_address": "rEK9ZdnAxMX3eqvF8HKJdBhftcepK3by55",
         "email_address": "sender_2@metaco.com",
         "created_at": datetime(2025, 4, 9, 3, 30, 29),
         "updated_at": datetime(2025, 4, 11, 19, 48, 18, 235466)
     },
     {
-        "customer_id": "receiver-2",
+        "customer_id": "customer-4",
         "wallet_seed": "sEdTeac7Bi6x6t6c3vz74Ux7s4MPcqe",
         "customer_type": CustomerType.RECEIVER,
         "wallet_address": "rJcYDNsHc5zAEbnPMj4y27GdbL6k2XvtuX",
@@ -71,7 +71,7 @@ SEED_CUSTOMERS = [
         "updated_at": datetime(2025, 4, 9, 3, 30, 29)
     },
     {
-        "customer_id": "receiver-4",
+        "customer_id": "customer-5",
         "wallet_seed": "sEd7QHq54A53HVB286ApCjh9EeakzbH",
         "customer_type": CustomerType.RECEIVER,
         "wallet_address": "rU1639GkScbLsUGbPDu7D1YHdMmM8E8NfL",
@@ -80,7 +80,7 @@ SEED_CUSTOMERS = [
         "updated_at": datetime(2025, 4, 11, 19, 59, 35, 821267)
     },
     {
-        "customer_id": "receiver-5",
+        "customer_id": "customer-6",
         "wallet_seed": "sEdScpmaSs5zM3YWjKTHPdsBTY6ZK3L",
         "customer_type": CustomerType.RECEIVER,
         "wallet_address": "rp7mh1AJKDfJxJMx7DL3urTuW9bjRTE5Cm",
@@ -89,7 +89,7 @@ SEED_CUSTOMERS = [
         "updated_at": datetime(2025, 4, 11, 20, 0, 58, 63133)
     },
     {
-        "customer_id": "receiver-6",
+        "customer_id": "customer-7",
         "wallet_seed": "sEdVJRosHqNbeGm7UDKH8zCiQ8fZ2so",
         "customer_type": CustomerType.RECEIVER,
         "wallet_address": "rPbnbLavLZLhXZhgoqVFCkTuG3YFcGS3Jh",

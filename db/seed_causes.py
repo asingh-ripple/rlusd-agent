@@ -1,23 +1,48 @@
 #!/usr/bin/env python3
 """
-Seed script to populate the causes table with mock data.
+Seed script to populate the database with mock data.
 """
 
 import os
 import sys
 import traceback
 from datetime import datetime
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, MetaData, text
 from sqlalchemy.orm import sessionmaker
 
 # Add the parent directory to the path to import the database module
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from db.database import Base, Cause
+from db.database import Base, Cause, Customer, CustomerType
 
 # Initialize the database with an SQLite database file
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "disaster_monitor.db")
 DB_CONNECTION_STRING = f"sqlite:///{DB_PATH}"
+
+# Mock customers data
+mock_customers = [
+    {
+        "customer_id": "customer-1",
+        "wallet_seed": "sEdV58GZ9wgCeK8jNpn4LCw5Ge3r9jqGN",
+        "wallet_address": "rExYJzCiX3U8PnM5SEKpYJCKP5nHqX7Pnh",
+        "email_address": "sender1@example.com",
+        "customer_type": CustomerType.SENDER
+    },
+    {
+        "customer_id": "customer-2",
+        "wallet_seed": "sEdVr8KtMdyMKxGGC7MQgS5xQfzWSC2VS",
+        "wallet_address": "r9LqwNgJMSKG8kHgCKsCHiYUGoPgKsZjcY",
+        "email_address": "sender2@example.com",
+        "customer_type": CustomerType.SENDER
+    },
+    {
+        "customer_id": "customer-3",
+        "wallet_seed": "sEdVG1xwsB4pMU2w6M9DF9K4qA6Pakvji",
+        "wallet_address": "rMVQiVRUXEGEiQrHHi2SyAKqV6Xdmvds8N",
+        "email_address": "receiver1@example.com",
+        "customer_type": CustomerType.RECEIVER
+    }
+]
 
 # Mock data from CauseDetailPage.tsx and other React components
 mock_causes = [
@@ -27,7 +52,8 @@ mock_causes = [
         "description": "Support communities affected by the recent devastating hurricane in Florida.",
         "goal": 500000,
         "imageUrl": "https://images.unsplash.com/photo-1569427575831-317b45c7a130?auto=format&fit=crop&q=80&w=1000",
-        "category": "Natural Disasters"
+        "category": "Natural Disasters",
+        "customer_id": "customer-1"
     },
     {
         "id": "2",
@@ -35,7 +61,8 @@ mock_causes = [
         "description": "Help families rebuild after the devastating floods in Louisiana.",
         "goal": 350000,
         "imageUrl": "https://images.unsplash.com/photo-1583488630027-58f4c80c74ff?auto=format&fit=crop&q=80&w=1000",
-        "category": "Natural Disasters"
+        "category": "Natural Disasters",
+        "customer_id": "customer-1"
     },
     {
         "id": "3",
@@ -43,7 +70,8 @@ mock_causes = [
         "description": "Provide support for communities affected by the devastating wildfires in California.",
         "goal": 400000,
         "imageUrl": "https://images.unsplash.com/photo-1602496849540-bf8fa67a6ef2?auto=format&fit=crop&q=80&w=1000",
-        "category": "Natural Disasters"
+        "category": "Natural Disasters",
+        "customer_id": "customer-1"
     },
     {
         "id": "4",
@@ -51,7 +79,8 @@ mock_causes = [
         "description": "Provide critical humanitarian assistance to civilians caught in the conflict in Gaza.",
         "goal": 750000,
         "imageUrl": "https://images.unsplash.com/photo-1628511954475-4fc8b0ed4193?auto=format&fit=crop&q=80&w=1000",
-        "category": "Conflict Zone"
+        "category": "Conflict Zone",
+        "customer_id": "customer-1"
     },
     {
         "id": "5",
@@ -59,7 +88,8 @@ mock_causes = [
         "description": "Support families displaced by the ongoing conflict in Ukraine with essential aid.", 
         "goal": 1000000,
         "imageUrl": "https://images.unsplash.com/photo-1655123613624-56376576e4a5?auto=format&fit=crop&q=80&w=1000",
-        "category": "Conflict Zone"
+        "category": "Conflict Zone",
+        "customer_id": "customer-1"
     },
     # Adding causes from CausesPage.tsx
     {
@@ -68,7 +98,8 @@ mock_causes = [
         "description": "GRN delivers emergency food, shelter, and water within 24 hours of natural disasters. Your donation helps their rapid-response teams reach areas hit by floods, earthquakes, and hurricanes around the world.",
         "goal": 50000,
         "imageUrl": "/images/disaster-relief.jpg",
-        "category": "Natural Disasters"
+        "category": "Natural Disasters",
+        "customer_id": "customer-2"
     },
     {
         "id": "7",
@@ -76,7 +107,8 @@ mock_causes = [
         "description": "Specializing in post-disaster recovery, ShelterNow helps communities build homes using local labor and sustainable materials. Support long-term recovery after natural catastrophes.",
         "goal": 15000,
         "imageUrl": "/images/shelter-rebuild.jpg",
-        "category": "Natural Disasters"
+        "category": "Natural Disasters",
+        "customer_id": "customer-2"
     },
     {
         "id": "8",
@@ -84,7 +116,8 @@ mock_causes = [
         "description": "HealthBridge deploys mobile clinics in underserved areas affected by conflicts and pandemics. Every donation fuels life-saving diagnoses and care in real time.",
         "goal": 200000,
         "imageUrl": "/images/mobile-clinics.jpg",
-        "category": "Health Emergencies"
+        "category": "Health Emergencies",
+        "customer_id": "customer-2"
     },
     {
         "id": "9",
@@ -92,7 +125,8 @@ mock_causes = [
         "description": "Providing food, medical aid, and psychological support for families affected by conflict in Gaza. Your donation goes directly to vetted local workers on the ground.",
         "goal": 60000,
         "imageUrl": "/images/gaza-aid.jpg",
-        "category": "Conflict Zone"
+        "category": "Conflict Zone",
+        "customer_id": "customer-2"
     },
     {
         "id": "10",
@@ -100,7 +134,8 @@ mock_causes = [
         "description": "Fighting the cholera outbreak with emergency IV fluids, antibiotics, and bed treatment. Your contribution supports local nurses and medics on the frontlines.",
         "goal": 220000,
         "imageUrl": "/images/cholera-haiti.jpg",
-        "category": "Health Emergencies"
+        "category": "Health Emergencies",
+        "customer_id": "customer-2"
     },
     {
         "id": "11",
@@ -108,25 +143,39 @@ mock_causes = [
         "description": "Providing school meals and nutritional support in East Africa where children face severe food insecurity due to drought. $1 can feed a child for a day.",
         "goal": 120000,
         "imageUrl": "/images/drought-children.jpg",
-        "category": "Food & Water Crisis"
+        "category": "Food & Water Crisis",
+        "customer_id": "customer-2"
     }
 ]
 
 def recreate_tables():
-    """Drop and recreate all tables"""
+    """Drop and recreate only the customers and causes tables"""
     try:
         print(f"Connecting to database: {DB_CONNECTION_STRING}")
         engine = create_engine(DB_CONNECTION_STRING)
         
-        # Drop all tables
-        print("Dropping all tables...")
-        Base.metadata.drop_all(engine)
-        print("Successfully dropped all tables.")
+        # Create a direct connection to execute raw SQL
+        connection = engine.connect()
         
-        # Create all tables, including the updated Cause model
-        print("Creating all tables...")
-        Base.metadata.create_all(engine)
-        print("Successfully created all tables.")
+        # Drop only the causes and customers tables in the correct order (causes depends on customers)
+        print("Dropping specific tables...")
+        try:
+            connection.execute(text("DROP TABLE IF EXISTS causes"))
+            print("Dropped causes table.")
+            connection.execute(text("DROP TABLE IF EXISTS customers"))
+            print("Dropped customers table.")
+            connection.commit()
+        except Exception as e:
+            print(f"Error dropping tables: {str(e)}")
+        
+        # Create only the customers and causes tables
+        print("Creating customers and causes tables...")
+        # Create a metadata object just for these two tables
+        metadata = MetaData()
+        Customer.__table__.to_metadata(metadata)
+        Cause.__table__.to_metadata(metadata)
+        metadata.create_all(engine)
+        print("Successfully created customers and causes tables.")
         
         return engine
     except Exception as e:
@@ -134,18 +183,31 @@ def recreate_tables():
         traceback.print_exc()
         return None
 
-def seed_causes():
+def seed_customers(session):
+    """Seed customers table with mock data."""
+    print("Seeding customers table...")
+    try:
+        # Check if customers already exist
+        existing_customers = session.query(Customer).all()
+        if existing_customers:
+            print(f"Found {len(existing_customers)} existing customers - skipping customer seeding")
+            return True
+            
+        # If no customers exist, add them
+        for customer_data in mock_customers:
+            customer = Customer(**customer_data)
+            print(f"Adding customer: {customer.customer_id}")
+            session.add(customer)
+        session.commit()
+        print("Successfully seeded customers table.")
+        return True
+    except Exception as e:
+        print(f"Error seeding customers table: {e}")
+        session.rollback()
+        return False
+
+def seed_causes(session):
     """Seed the causes table with mock data"""
-    print("Starting database setup...")
-    engine = recreate_tables()
-    if not engine:
-        print("Failed to setup database, aborting.")
-        return
-    
-    # Create a session
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    
     try:
         print("Seeding causes table...")
         for cause_data in mock_causes:
@@ -159,6 +221,7 @@ def seed_causes():
                 imageUrl=cause_data["imageUrl"],
                 category=cause_data["category"],
                 goal=cause_data["goal"],
+                customer_id=cause_data["customer_id"]
             )
             
             session.add(cause)
@@ -166,13 +229,41 @@ def seed_causes():
         # Commit all changes
         session.commit()
         print("Successfully seeded causes table!")
+        return True
         
     except Exception as e:
         session.rollback()
         print(f"Error seeding causes table: {str(e)}")
         traceback.print_exc()
+        return False
+
+def seed_database():
+    """Main function to seed the database"""
+    print("Starting database setup...")
+    engine = recreate_tables()
+    if not engine:
+        print("Failed to setup database, aborting.")
+        return
+    
+    # Create a session
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    
+    try:
+        # First seed customers
+        if not seed_customers(session):
+            print("Failed to seed customers, aborting.")
+            return
+        
+        # Then seed causes
+        if not seed_causes(session):
+            print("Failed to seed causes.")
+            return
+        
+        print("Database seeding completed successfully!")
+        
     finally:
         session.close()
 
 if __name__ == "__main__":
-    seed_causes() 
+    seed_database() 
