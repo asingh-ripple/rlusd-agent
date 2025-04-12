@@ -304,6 +304,11 @@ async def get_cause_details(cause_id: str):
     try:
         cause = db.get_cause(cause_id)
         customer = db.get_customer(cause.customer_id)
+        donations = db.get_donation_by_cause_id(cause_id)
+        total_donations = sum(donation.amount for donation in donations)
+        num_donations = len(donations)
+        print(f"Total donations: {total_donations}")
+        print(f"Number of donations: {num_donations}")
         
         # Convert to response format
         cause_dict = {
@@ -313,7 +318,9 @@ async def get_cause_details(cause_id: str):
             "description": cause.description,
             "imageUrl": cause.imageUrl,
             "category": cause.category,
-            "customer_id": cause.customer_id
+            "customer_id": cause.customer_id,
+            "donations": num_donations,
+            "raised": total_donations
         }
         
         return CauseDetailsResponse(**cause_dict)
@@ -326,12 +333,14 @@ async def get_cause_details(cause_id: str):
 async def get_cause_details():
     """Get all customer details with a left join between customers and customer_details tables."""
     try:
-        causes = db.get_all_causes()
-        # customer = db.get_customer(cause.customer_id)
+        causes = db.get_all_causes() 
         
         # Convert to response format
         cause_dict = []
         for cause in causes:
+            donations = db.get_donation_by_cause_id(cause.cause_id)
+            total_donations = sum(donation.amount for donation in donations)
+            num_donations = len(donations)
             cause_dict.append({
                 "cause_id": cause.cause_id,
                 "name": cause.name,
@@ -339,7 +348,9 @@ async def get_cause_details():
                 "description": cause.description,
                 "imageUrl": cause.imageUrl,
                 "category": cause.category,
-                "customer_id": cause.customer_id
+                "customer_id": cause.customer_id,
+                "donations": num_donations,
+                "raised": total_donations
             })
         
         return cause_dict

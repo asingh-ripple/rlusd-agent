@@ -699,6 +699,13 @@ class Database:
             raise
         finally:
             session.close()
+    
+    def get_donation_by_cause_id(self, cause_id: str) -> List[Donations]:
+        """
+        Get all donations for a cause.
+        """
+        session = self.Session()
+        return session.query(Donations).filter_by(cause_id=cause_id).all()
 
     def get_cause_from_address(self, wallet_address: str) -> Optional[Cause]:
         """
