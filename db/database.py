@@ -79,7 +79,14 @@ class Customer(Base):
                                  foreign_keys="Check.receiver_id",
                                  back_populates="receiver",
                                  cascade="all, delete-orphan")
-    details = relationship("CustomerDetails", back_populates="customer", uselist=False, cascade="all, delete-orphan")
+    details = relationship("Cause", back_populates="customer", uselist=False, cascade="all, delete-orphan")
+
+
+class DonationStatus(str, Enum):
+    """Enum for donation status."""
+    PENDING = "PENDING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
 
 class Donations(Base):
     """Model for tracking donations."""
@@ -96,8 +103,9 @@ class Donations(Base):
     cause = relationship("Cause", foreign_keys=[cause_id], back_populates="donations")
     status = Column(SQLEnum(DonationStatus), nullable=False)
 
-class DonationStatus(str, Enum):
-    """Enum for donation status."""
+
+class DisbursementStatus(str, Enum):
+    """Enum for disbursement status."""
     PENDING = "PENDING"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
@@ -121,15 +129,10 @@ class Disbursements_Donations(Base):
 
     disbursement_id = Column(String(50), ForeignKey("disbursements.disbursement_id", ondelete="CASCADE"), primary_key=True)
     donation_id = Column(String(50), ForeignKey("donations.donation_id", ondelete="CASCADE"), primary_key=True)
+    amount = Column(Numeric(20, 6), nullable=False)  # 20 digits total, 6 decimal places
     # Relationships
     disbursement = relationship("Disbursement", foreign_keys=[disbursement_id], back_populates="donations")
     donation = relationship("Donation", foreign_keys=[donation_id], back_populates="disbursements")
-
-class DisbursementStatus(str, Enum):
-    """Enum for disbursement status."""
-    PENDING = "PENDING"
-    COMPLETED = "COMPLETED"
-    FAILED = "FAILED"
 
 class CustomerRelationship(Base):
     """Model for tracking relationships between customers."""
@@ -227,8 +230,11 @@ class Cause(Base):
     description = Column(String, nullable=False)
     imageUrl = Column(String, nullable=False)
     category = Column(String, nullable=False)
+    goal = Column(Numeric(20, 6), nullable=False)  # 20 digits total, 6 decimal places
     # Relationship
     customer = relationship("Customer", back_populates="details")
+    donations = relationship("Donation", back_populates="cause")
+    disbursements = relationship("Disbursement", back_populates="cause")
 
     def __repr__(self):
         return f"<Cause(cause_id={self.cause_id}, name={self.name}, description={self.description}, imageUrl={self.imageUrl}, category={self.category})>"
@@ -545,7 +551,7 @@ class Database:
         customer = self.get_customer(customer_id)
         return customer.wallet_seed
     
-    def insert_customer_details(self, customer_id: str, name: str, goal: float, description: str) -> None:
+    def insert_cause(self, cause_id: str, name: str, description: str, imageUrl: str, category: str, goal: float) -> None:
         """
         Add customer details to the database.
         
@@ -557,16 +563,17 @@ class Database:
         """
         session = self.Session()
         try:
-            details = CustomerDetails(
-                customer_id=customer_id,
+            cause = Cause(
+                cause_id=cause_id,
                 name=name,
-                goal=goal,
                 description=description,
-                total_donations=0
+                imageUrl=imageUrl,
+                category=category,
+                goal=goal
             )
-            session.add(details)
+            session.add(cause)
             session.commit()
-            logger.info(f"Added details for customer {customer_id}")
+            logger.info(f"Added cause {cause_id}")
         except Exception as e:
             session.rollback()
             logger.error(f"Error adding customer details: {str(e)}")
@@ -574,19 +581,19 @@ class Database:
         finally:
             session.close()
             
-    def get_customer_details(self, customer_id: str) -> Optional[CustomerDetails]:
+    def get_cause(self, customer_id: str) -> Optional[Cause]:
         """
-        Get customer details by ID.
+        Get cause by ID.
         
         Args:
             customer_id: ID of the customer
             
         Returns:
-            CustomerDetails object if found, None otherwise
+            Cause object if found, None otherwise
         """
         session = self.Session()
         try:
-            return session.query(CustomerDetails).filter_by(customer_id=customer_id).first()
+            return session.query(Cause).filter_by(customer_id=customer_id).first()
         finally:
             session.close()
             
@@ -599,7 +606,7 @@ class Database:
         """
         session = self.Session()
         try:
-            details = session.query(CustomerDetails).filter_by(customer_id=customer_id).first()
+            details = session.query(Cause).filter_by(customer_id=customer_id).first()
             if details:
                 details.total_donations += 1
                 session.commit()
