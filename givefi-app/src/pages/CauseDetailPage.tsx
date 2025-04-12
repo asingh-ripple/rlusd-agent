@@ -5,6 +5,7 @@ import './CauseDetailPage.css';
 
 // Components
 import DonationForm from '../components/DonationForm';
+import DonationConfirmationModal from '../components/DonationConfirmationModal';
 
 // Utils
 import { formatCurrency, calculatePercentage, formatDate, getShareableUrl, getSocialShareUrls, image } from '../utils/helpers';
@@ -78,6 +79,8 @@ const CauseDetailPage: React.FC = () => {
   const [cause, setCause] = useState<Cause | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<'story' | 'updates'>('story');
+  const [donation, setDonation] = useState<string>('');
+  const [showConfirmationModal, setShowConfirmationModal] = useState<boolean>(false);
 
   const fetchCause = async (causeId: string): Promise<Cause> => {
     // In a real application, this would be an API call
@@ -97,13 +100,38 @@ const CauseDetailPage: React.FC = () => {
       console.error('Error fetching cause details:', error);
       setLoading(false);
     });
-  }, [params.id]);
+  }, [params.id, donation]);
 
-  const handleDonationSubmit = (amount: number, paymentMethod: string, formData: any) => {
+  useEffect(() => {
+    if (donation) {
+      setShowConfirmationModal(true);
+    }
+  }, [donation]);
+
+  const handleDonationSubmit = (amount: number, cause_id: string, customer_id: string) => {
     // In a real app, this would submit to a payment processor
-    alert(`Thank you for your donation of ${formatCurrency(amount)}!`);
-    console.log('Payment method:', paymentMethod);
-    console.log('Form data:', formData);
+    fetch(`http://localhost:8000/donate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        amount: amount,
+        cause_id: cause_id,
+        customer_id: customer_id,
+        currency: 'USD'
+      })
+    }).then(response => response.json())
+      .then(data => {
+        setDonation(data.donation_id);
+      })
+      .catch(error => {
+        console.error('Error submitting donation:', error);
+      });
+  };
+
+  const handleCloseModal = () => {
+    setShowConfirmationModal(false);
   };
 
   if (loading) {
@@ -286,6 +314,8 @@ const CauseDetailPage: React.FC = () => {
             {/* Donation form */}
             <DonationForm 
               causeTitle={cause.name}
+              cause_id={cause.cause_id}
+              customer_id={"donor-1"}
               onSubmit={handleDonationSubmit}
             />
 
@@ -344,6 +374,12 @@ const CauseDetailPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Donation Confirmation Modal */}
+      <DonationConfirmationModal 
+        isOpen={showConfirmationModal}
+        onClose={handleCloseModal}
+      />
     </div>
   );
 };

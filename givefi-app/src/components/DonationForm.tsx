@@ -1,15 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { formatCurrency } from '../utils/helpers';
 import './DonationForm.css';
 
 interface DonationFormProps {
   causeTitle: string;
-  onSubmit?: (amount: number, paymentMethod: string, formData: any) => void;
+  cause_id: string;
+  customer_id: string;
+  onSubmit?: (amount: number, cause_id: string, customer_id: string) => void; 
 }
 
-const DonationForm: React.FC<DonationFormProps> = ({ causeTitle, onSubmit }) => {
+const DonationForm: React.FC<DonationFormProps> = ({ causeTitle, cause_id, customer_id, onSubmit }) => {
   const [donationAmount, setDonationAmount] = useState<string>('25');
   const [paymentMethod, setPaymentMethod] = useState<string>('creditCard');
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -19,6 +23,19 @@ const DonationForm: React.FC<DonationFormProps> = ({ causeTitle, onSubmit }) => 
   });
 
   const predefinedAmounts = [10, 25, 50];
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [dropdownRef]);
 
   const handleDonationInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Only allow numbers and a single decimal point
@@ -44,10 +61,14 @@ const DonationForm: React.FC<DonationFormProps> = ({ causeTitle, onSubmit }) => 
     }
 
     if (onSubmit) {
-      onSubmit(parseFloat(donationAmount), paymentMethod, formData);
+      onSubmit(parseFloat(donationAmount), cause_id, customer_id);
     } else {
       alert(`Thank you for your donation of ${formatCurrency(parseFloat(donationAmount))}!`);
     }
+  };
+
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen);
   };
 
   return (
@@ -84,89 +105,51 @@ const DonationForm: React.FC<DonationFormProps> = ({ causeTitle, onSubmit }) => 
         </div>
 
         <div className="form-section">
-          <h3>Payment Method</h3>
-          <div className="payment-methods">
-            <label className="payment-method">
-              <input
-                type="radio"
-                name="paymentMethod"
-                value="creditCard"
-                checked={paymentMethod === 'creditCard'}
-                onChange={() => setPaymentMethod('creditCard')}
-              />
-              <span className="payment-label">Credit Card</span>
-            </label>
-            <label className="payment-method">
-              <input
-                type="radio"
-                name="paymentMethod"
-                value="paypal"
-                checked={paymentMethod === 'paypal'}
-                onChange={() => setPaymentMethod('paypal')}
-              />
-              <span className="payment-label">PayPal</span>
-            </label>
-          </div>
-
-          {paymentMethod === 'creditCard' && (
-            <div className="credit-card-input">
-              <label>
-                Credit Card Number
-                <input
-                  type="text"
-                  name="creditCardNumber"
-                  value={formData.creditCardNumber}
-                  onChange={handleInputChange}
-                  placeholder="**** **** **** ****"
-                  className="form-input"
-                />
-              </label>
+          <h3>Select Payment Method</h3>
+          <div className="payment-dropdown" ref={dropdownRef}>
+            <div 
+              className="payment-dropdown-header" 
+              onClick={toggleDropdown}
+            >
+              <div className="payment-dropdown-selected">
+                <img src="/images/icons/visa.png" alt="Visa" className="payment-card-icon" />
+                <span>•••• •••• •••• 4272</span>
+              </div>
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width="24" 
+                height="24" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+                className={`dropdown-arrow ${isDropdownOpen ? 'open' : ''}`}
+              >
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
             </div>
-          )}
+            
+            {isDropdownOpen && (
+              <div className="payment-dropdown-menu">
+                <div 
+                  className="payment-dropdown-item active"
+                  onClick={() => {
+                    setPaymentMethod('creditCard');
+                    setIsDropdownOpen(false);
+                  }}
+                >
+                  <img src="/images/icons/visa.png" alt="Visa" className="payment-card-icon" />
+                  <span>•••• •••• •••• 4272</span>
+                </div>
+                {/* Additional cards could be added here */}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="form-section">
-          <h3>Personal Information</h3>
-          <div className="form-fields">
-            <div className="form-row">
-              <label>
-                First Name
-                <input
-                  type="text"
-                  name="firstName"
-                  value={formData.firstName}
-                  onChange={handleInputChange}
-                  className="form-input"
-                  required
-                />
-              </label>
-            </div>
-            <div className="form-row">
-              <label>
-                Last Name
-                <input
-                  type="text"
-                  name="lastName"
-                  value={formData.lastName}
-                  onChange={handleInputChange}
-                  className="form-input"
-                  required
-                />
-              </label>
-            </div>
-            <div className="form-row">
-              <label>
-                Email Address
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className="form-input"
-                  required
-                />
-              </label>
-            </div>
             <div className="form-row checkbox-row">
               <label className="checkbox-label">
                 <input
@@ -179,18 +162,17 @@ const DonationForm: React.FC<DonationFormProps> = ({ causeTitle, onSubmit }) => 
               </label>
             </div>
           </div>
-        </div>
 
         <div className="donation-summary">
           <div className="donation-total">
             <span>Donation Total:</span>
             <span className="donation-amount">
-              {formatCurrency(parseFloat(donationAmount) || 0)}
+              ${donationAmount}
             </span>
           </div>
         </div>
 
-        <button type="submit" className="donate-button">
+        <button type="submit" className="donate-button" onClick={handleSubmit}>
           Donate Now
         </button>
       </form>

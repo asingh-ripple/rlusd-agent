@@ -35,33 +35,38 @@
   display: flex;
   gap: 10px;
   margin-bottom: 15px;
+  justify-content: space-between;
 }
 
 .amount-button {
   flex: 1;
-  padding: 10px;
+  padding: 12px 0;
   border: 1px solid #ced4da;
   background-color: #fff;
-  border-radius: 4px;
-  font-weight: 500;
-  color: #495057;
+  border-radius: 50px;
+  font-weight: 600;
+  font-size: 18px;
+  color: #333;
   cursor: pointer;
   transition: all 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 .amount-button:hover {
   background-color: #f8f9fa;
+  border-color: #4f46e5;
 }
 
 .amount-button.active {
-  background-color: #4f46e5;
-  color: white;
+  background-color: #fff;
+  color: #4f46e5;
   border-color: #4f46e5;
+  box-shadow: 0 1px 4px rgba(79, 70, 229, 0.3);
 }
 
 /* Custom amount input */
 .custom-amount {
-  margin-bottom: 15px;
+  margin-bottom: 20px;
 }
 
 .input-group {
@@ -70,44 +75,82 @@
   border: 1px solid #ced4da;
   border-radius: 4px;
   overflow: hidden;
-  background-color: #f8f9fa;
+  background-color: #f1f3f5;
+  padding: 5px 10px;
 }
 
 .currency-symbol {
-  padding: 0 10px;
-  color: #495057;
+  padding: 0 10px 0 5px;
+  color: #333;
   font-weight: 600;
+  font-size: 20px;
 }
 
 .donation-input {
   flex: 1;
-  padding: 10px;
+  padding: 12px 5px;
   border: none;
   background: transparent;
-  font-size: 16px;
+  font-size: 20px;
+  font-weight: 500;
   outline: none;
+  color: #333;
 }
 
 /* Payment method options */
 .payment-methods {
   display: flex;
+  flex-direction: column;
   gap: 16px;
   margin-bottom: 15px;
 }
 
 .payment-method {
+  position: relative;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  padding: 12px 15px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   cursor: pointer;
+  background-color: #f8f9fa;
+  transition: border-color 0.2s;
+}
+
+.payment-method:hover {
+  border-color: #4f46e5;
 }
 
 .payment-method input[type="radio"] {
   margin-right: 8px;
+  position: absolute;
+  opacity: 0;
 }
 
 .payment-label {
-  font-size: 14px;
-  color: #495057;
+  font-size: 16px;
+  color: #333;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+}
+
+.payment-label::before {
+  content: '';
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #ced4da;
+  margin-right: 10px;
+  display: inline-block;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.payment-method input[type="radio"]:checked + .payment-label::before {
+  border-color: #4f46e5;
+  background-color: #4f46e5;
+  box-shadow: inset 0 0 0 4px #fff;
 }
 
 /* Form fields */
@@ -173,7 +216,7 @@
   padding: 15px 0;
   border-top: 1px solid #e9ecef;
   border-bottom: 1px solid #e9ecef;
-  margin-bottom: 15px;
+  margin-bottom: 20px;
 }
 
 .donation-total {
@@ -181,28 +224,33 @@
   justify-content: space-between;
   align-items: center;
   font-weight: 600;
+  font-size: 18px;
 }
 
 .donation-amount {
-  font-size: 20px;
-  color: #4f46e5;
+  font-size: 24px;
+  color: #46c55a;
+  font-weight: 700;
 }
 
 /* Donate button */
 .donate-button {
-  background-color: #4f46e5;
+  background-color: #46c55a;
   color: white;
   border: none;
-  padding: 12px;
+  padding: 15px;
   border-radius: 4px;
   font-weight: 600;
-  font-size: 16px;
+  font-size: 18px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   cursor: pointer;
   transition: background-color 0.2s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .donate-button:hover {
-  background-color: #4338ca;
+  background-color: #3cb550;
 }
 
 /* Secure donation note */
@@ -226,4 +274,86 @@
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+/* Payment method dropdown */
+.payment-dropdown {
+  position: relative;
+  width: 100%;
+  margin-bottom: 15px;
+}
+
+.payment-dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 15px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background-color: #f8f9fa;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.payment-dropdown-header:hover {
+  border-color: #4f46e5;
+}
+
+.payment-dropdown-selected {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+  color: #333;
+}
+
+.payment-card-icon {
+  height: 20px;
+  width: auto;
+}
+
+.dropdown-arrow {
+  transition: transform 0.2s ease;
+}
+
+.dropdown-arrow.open {
+  transform: rotate(180deg);
+}
+
+.payment-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  width: 100%;
+  background-color: white;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+.payment-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 15px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.payment-dropdown-item:hover {
+  background-color: #f1f3f5;
+}
+
+.payment-dropdown-item.active {
+  background-color: #eef2ff;
+  position: relative;
+}
+
+.payment-dropdown-item.active::after {
+  content: '✓';
+  position: absolute;
+  right: 15px;
+  color: #4f46e5;
+  font-weight: bold;
 } 

@@ -330,13 +330,17 @@ async def get_cause_details(cause_id: str):
 
 
 @app.get("/causes", response_model=List[CauseDetailsResponse])
-async def get_cause_details():
+async def get_cause_details(limit: Optional[int] = 10):
     """Get all customer details with a left join between customers and customer_details tables."""
     try:
-        causes = db.get_all_causes() 
+        if limit:
+            causes = db.limited_causes(limit)
+        else:
+            causes = db.get_all_causes()
         
         # Convert to response format
         cause_dict = []
+        print(f"Found {len(causes)} causes")
         for cause in causes:
             donations = db.get_donation_by_cause_id(cause.cause_id)
             total_donations = sum(donation.amount for donation in donations)

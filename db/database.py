@@ -700,6 +700,13 @@ class Database:
         finally:
             session.close()
     
+    def limited_causes(self, limit: int) -> List[Cause]:
+        """
+        Get a limited number of causes.
+        """
+        session = self.Session()
+        return session.query(Cause).limit(limit).all()
+    
     def get_donation_by_cause_id(self, cause_id: str) -> List[Donations]:
         """
         Get all donations for a cause.

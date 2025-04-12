@@ -1,0 +1,101 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-container {
+  max-width: 90%;
+  width: 600px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.donation-confirmation-modal {
+  background-color: white;
+  border-radius: 12px;
+  padding: 40px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  text-align: center;
+}
+
+.confirmation-title {
+  font-size: 42px;
+  font-weight: 900;
+  margin-bottom: 40px;
+  color: #222;
+}
+
+.confirmation-message {
+  font-size: 18px;
+  line-height: 1.6;
+  color: #444;
+  margin-bottom: 50px;
+  text-align: left;
+}
+
+.confirmation-heading {
+  font-weight: 700;
+  color: #222;
+}
+
+.feel-good-button {
+  background-color: #46c55a;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 16px 30px;
+  font-size: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  letter-spacing: 1px;
+}
+
+.feel-good-button:hover {
+  background-color: #3cb550;
+}
+
+.feel-good-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(70, 197, 90, 0.4);
+}
+
+@media (max-width: 576px) {
+  .donation-confirmation-modal {
+    padding: 30px 20px;
+  }
+  
+  .confirmation-title {
+    font-size: 36px;
+    margin-bottom: 30px;
+  }
+  
+  .confirmation-message {
+    font-size: 16px;
+    margin-bottom: 40px;
+  }
+  
+  .feel-good-button {
+    width: 100%;
+    padding: 14px 20px;
+  }
+} 
