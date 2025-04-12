@@ -11,6 +11,7 @@ from blockchain.balance import get_formatted_balance
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from config.logger_config import setup_logger
+from fastapi.middleware.cors import CORSMiddleware
 
 logger = setup_logger(__name__)
 # ============================================================================
@@ -24,6 +25,15 @@ app = FastAPI(
     title="Disaster Monitor API",
     description="API for monitoring and analyzing disaster situations",
     version="1.0.0"
+)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 db = get_db()
@@ -95,8 +105,8 @@ class CauseDetailsResponse(BaseModel):
     # customer_type: str
     # wallet_address: Optional[str]
     # email: Optional[str]
-    # total_donations: Optional[int]
-    # amount_raised: Optional[int]
+    donations: Optional[int] = 0
+    raised: Optional[int] = 0
 
     class Config:
         from_attributes = True
@@ -243,7 +253,7 @@ async def get_cause_details(cause_id: str):
     """Get all customer details with a left join between customers and customer_details tables."""
     try:
         cause = db.get_cause(cause_id)
-        # customer = db.get_customer(cause.customer_id)
+        customer = db.get_customer(cause.customer_id)
         
         # Convert to response format
         cause_dict = {
@@ -257,6 +267,32 @@ async def get_cause_details(cause_id: str):
         }
         
         return CauseDetailsResponse(**cause_dict)
+    except Exception as e:
+        logger.error(f"Error retrieving cause details: {e}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving cause details: {str(e)}")
+
+
+@app.get("/causes", response_model=List[CauseDetailsResponse])
+async def get_cause_details():
+    """Get all customer details with a left join between customers and customer_details tables."""
+    try:
+        causes = db.get_all_causes()
+        # customer = db.get_customer(cause.customer_id)
+        
+        # Convert to response format
+        cause_dict = []
+        for cause in causes:
+            cause_dict.append({
+                "cause_id": cause.cause_id,
+                "name": cause.name,
+                "goal": cause.goal,
+                "description": cause.description,
+                "imageUrl": cause.imageUrl,
+                "category": cause.category,
+                "customer_id": cause.customer_id
+            })
+        
+        return cause_dict
     except Exception as e:
         logger.error(f"Error retrieving cause details: {e}")
         raise HTTPException(status_code=500, detail=f"Error retrieving cause details: {str(e)}")
