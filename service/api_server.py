@@ -110,10 +110,20 @@ class PaymentRequest(BaseModel):
     currency: str
     amount: float
 
+class DisbursementInfo(BaseModel):
+    donation_id: str
+    customer_id: str
+    original_amount: float
+    amount: float
+
 class PaymentResponse(BaseModel):
     success: bool
     message: str
     transaction_hash: Optional[str] = None
+    disbursements: List[DisbursementInfo] = []
+
+    class Config:
+        from_attributes = True
 
 class DonationRequest(BaseModel):
     """Request model for donation registration."""
@@ -201,11 +211,11 @@ async def get_payment_trace(customer_id: str, max_depth: Optional[int] = 10):
             
             response.append(ConsolidatedEdgeResponse(
                 sender=edge.sender,
-                sender_id=sender_details['customer_id'] if sender_details else None,
-                sender_name=sender_details['name'] if sender_details else None,
+                sender_id=sender_details.customer_id if sender_details and sender_details.customer_id else "Unknown",
+                sender_name=sender_details.customer_name if sender_details and sender_details.customer_name else "Unknown",
                 receiver=edge.receiver,
-                receiver_id=receiver_details['customer_id'] if receiver_details else None,
-                receiver_name=receiver_details['name'] if receiver_details else None,
+                receiver_id=receiver_details.customer_id if receiver_details and receiver_details.customer_id else "Unknown",
+                receiver_name=receiver_details.customer_name if receiver_details and receiver_details.customer_name else "Unknown",
                 currency=edge.currency,
                 payment_type=edge.payment_type,
                 amounts=edge.amounts,
@@ -396,7 +406,7 @@ async def health_check():
     """
     return {"status": "healthy"}
 
-@app.post("/payment", response_model=PaymentResponse)
+@app.post("/disburse", response_model=PaymentResponse)
 async def execute_payment_endpoint(payment_request: PaymentRequest):
     """
     Execute a payment transaction between two customers.
@@ -405,11 +415,11 @@ async def execute_payment_endpoint(payment_request: PaymentRequest):
         payment_request: Payment details including sender, receiver, currency, and amount
         
     Returns:
-        PaymentResponse with success status and transaction details
+        PaymentResponse with success status, transaction details, and disbursement information
     """
     try:
         # Execute the payment
-        success, transaction_hash = await execute_payment(
+        success, transaction_hash, disbursements = await execute_payment(
             sender_id=payment_request.sender_id,
             beneficiary_id=payment_request.receiver_id,
             currency=payment_request.currency,
@@ -420,13 +430,22 @@ async def execute_payment_endpoint(payment_request: PaymentRequest):
             return PaymentResponse(
                 success=True,
                 message="Payment executed successfully",
-                transaction_hash=transaction_hash
+                transaction_hash=transaction_hash,
+                disbursements=[
+                    DisbursementInfo(
+                        donation_id=d['donation_id'],
+                        customer_id=d['customer_id'],
+                        original_amount=d['original_amount'],
+                        amount=d['amount']
+                    ) for d in disbursements
+                ]
             )
         else:
             return PaymentResponse(
                 success=False,
                 message="Payment failed",
-                transaction_hash=transaction_hash
+                transaction_hash=transaction_hash,
+                disbursements=[]
             )
             
     except Exception as e:

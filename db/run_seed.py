@@ -6,6 +6,7 @@ Script to run all seeding operations.
 import os
 import sys
 import argparse
+import traceback
 
 # Add the parent directory to the path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

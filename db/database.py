@@ -4,7 +4,7 @@ Database module for managing application data.
 
 from typing import Optional, List, Dict
 from enum import Enum
-from sqlalchemy import create_engine, Column, String, ForeignKey, Enum as SQLEnum, Numeric, event, DateTime, Integer
+from sqlalchemy import create_engine, Column, String, ForeignKey, Enum as SQLEnum, Numeric, event, DateTime, Integer, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.engine import Engine
@@ -48,6 +48,7 @@ class Customer(Base):
     __tablename__ = "customers"
 
     customer_id = Column(String(50), primary_key=True, index=True)
+    customer_name = Column(String(255), nullable=True)  # Added customer_name column
     wallet_seed = Column(String(128))
     wallet_address = Column(String(128), nullable=True)  # Renamed from public_key
     email_address = Column(String(255), nullable=True)  # Added email_address
@@ -105,26 +106,18 @@ class DisbursementStatus(str, Enum):
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
 
-class Disbursements(Base):
-    """Model for tracking disbursements."""
-    __tablename__ = "disbursements"
 
-    disbursement_id = Column(String(50), primary_key=True)
-    cause_id = Column(String(50), ForeignKey("causes.cause_id", ondelete="CASCADE"), nullable=False)
-    amount = Column(Numeric(20, 6), nullable=False)  # 20 digits total, 6 decimal places
-    currency = Column(String, nullable=False)
-    disbursement_date = Column(DateTime, nullable=False, default=datetime.utcnow)
-    status = Column(SQLEnum(DisbursementStatus), nullable=False)
-    # Relationships
-    # cause = relationship("Cause", foreign_keys=[cause_id], back_populates="disbursements_list")
-
-class Disbursements_Donations(Base):
+class DisbursementsDonations(Base):
     """Model for tracking disbursements and donations."""
     __tablename__ = "disbursements_donations"
 
-    disbursement_id = Column(String(50), ForeignKey("disbursements.disbursement_id", ondelete="CASCADE"), primary_key=True)
-    donation_id = Column(String(50), ForeignKey("donations.donation_id", ondelete="CASCADE"), primary_key=True)
-    amount = Column(Numeric(20, 6), nullable=False)  # 20 digits total, 6 decimal places
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    donation_id = Column(String, nullable=False)
+    disbursement_id = Column(String, nullable=False)  # This will be the transaction hash
+    cause_id = Column(String, nullable=False)
+    donor_id = Column(String, nullable=False)
+    amount = Column(Float, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     # Relationships
     # disbursement = relationship("Disbursement", foreign_keys=[disbursement_id], back_populates="donations")
     # donation = relationship("Donation", foreign_keys=[donation_id], back_populates="disbursements")
@@ -251,7 +244,7 @@ class Database:
         # Create tables if they don't exist
         Base.metadata.create_all(self.engine)
         
-    def add_customer(self, customer_id: str, wallet_seed: str, customer_type: CustomerType, wallet_address: str, email_address: str) -> None:
+    def add_customer(self, customer_id: str, wallet_seed: str, customer_type: CustomerType, wallet_address: str, email_address: str, customer_name: Optional[str] = None) -> None:
         """
         Add a new customer to the database.
         
@@ -259,6 +252,9 @@ class Database:
             customer_id: Unique identifier for the customer
             wallet_seed: XRPL wallet seed
             customer_type: Type of customer (sender or receiver)
+            wallet_address: The customer's wallet address
+            email_address: The customer's email address
+            customer_name: The customer's name (optional)
         """
         session = self.Session()
         try:
@@ -267,7 +263,8 @@ class Database:
                 wallet_seed=wallet_seed,
                 customer_type=customer_type,
                 wallet_address=wallet_address,
-                email_address=email_address
+                email_address=email_address,
+                customer_name=customer_name
             )
             session.add(customer)
             session.commit()
@@ -577,19 +574,19 @@ class Database:
         finally:
             session.close()
             
-    def get_cause(self, customer_id: str) -> Optional[Cause]:
+    def get_cause(self, cause_id: str) -> Optional[Cause]:
         """
         Get cause by ID.
         
         Args:
-            customer_id: ID of the customer
+            cause_id: ID of the cause
             
         Returns:
             Cause object if found, None otherwise
         """
         session = self.Session()
         try:
-            return session.query(Cause).filter_by(customer_id=customer_id).first()
+            return session.query(Cause).filter_by(cause_id=cause_id).first()
         finally:
             session.close()
             
@@ -614,43 +611,36 @@ class Database:
         finally:
             session.close()
 
-    def get_customer_details_from_wallet(self, wallet_address: str) -> Optional[Dict[str, str]]:
+    def get_customer_details_from_wallet(self, wallet_address: str) -> Optional[Customer]:
         """
-        Get customer details by wallet address, joining customers and customer_details tables.
+        Get customer details from wallet address.
         
         Args:
-            wallet_address: The wallet address to look up
+            wallet_address (str): The wallet address to look up
             
         Returns:
-            Dictionary containing customer_id, wallet_address, and name, or None if not found
+            Optional[Customer]: The complete customer object if found, None otherwise
         """
-        session = self.Session()
+        session = None
         try:
-            # Join customers and customer_details tables
-            result = session.query(
-                Customer.customer_id,
-                Customer.wallet_address,
-                Cause.name
-            ).join(
-                Cause,
-                Customer.customer_id == Cause.customer_id
-            ).filter(
+            session = self.Session()
+            customer = session.query(Customer).filter(
                 Customer.wallet_address == wallet_address
             ).first()
             
-            if result:
-                return {
-                    'cause_id': result.cause_id,
-                    'wallet_address': result.wallet_address,
-                    'name': result.name
-                }
-            return None
-            
+            if customer:
+                logger.info(f"Found customer with wallet address {wallet_address}")
+                return customer
+            else:
+                logger.warning(f"No customer found with wallet address {wallet_address}")
+                return None
+                
         except Exception as e:
-            logger.error(f"Error getting customer details from wallet: {str(e)}")
-            return None
+            logger.error(f"Error getting customer details: {str(e)}")
+            raise
         finally:
-            session.close()
+            if session:
+                session.close()
 
     def insert_donation(self, 
                     customer_id: str,
@@ -699,6 +689,39 @@ class Database:
             session.rollback()
             logger.error(f"Error inserting donation: {str(e)}")
             raise
+        finally:
+            session.close()
+
+    def get_cause_from_address(self, wallet_address: str) -> Optional[Cause]:
+        """
+        Get cause object by joining customers and causes tables using wallet address.
+        
+        Args:
+            wallet_address: The wallet address to look up
+            
+        Returns:
+            Cause object if found, None otherwise
+        """
+        session = self.Session()
+        try:
+            # Join customers and causes tables
+            result = session.query(Cause).join(
+                Customer,
+                Customer.customer_id == Cause.cause_id
+            ).filter(
+                Customer.wallet_address == wallet_address
+            ).first()
+            
+            if result:
+                logger.info(f"Found cause for wallet address {wallet_address}")
+                return result
+                
+            logger.warning(f"No cause found for wallet address {wallet_address}")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error getting cause from wallet address: {str(e)}")
+            return None
         finally:
             session.close()
 
