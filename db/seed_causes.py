@@ -16,7 +16,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from db.database import Base, Cause
 
 # Initialize the database with an SQLite database file
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "giveFi.db")
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "disaster_monitor.db")
 DB_CONNECTION_STRING = f"sqlite:///{DB_PATH}"
 
 # Mock data from CauseDetailPage.tsx and other React components
