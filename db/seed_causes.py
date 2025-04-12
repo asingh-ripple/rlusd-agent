@@ -22,7 +22,7 @@ DB_CONNECTION_STRING = f"sqlite:///{DB_PATH}"
 # Mock data from CauseDetailPage.tsx and other React components
 mock_causes = [
     {
-        "id": "1",
+        "id": "customer-1",
         "title": "Hurricane Relief in Florida",
         "description": "Support communities affected by the recent devastating hurricane in Florida.",
         "goal": 500000,
@@ -30,7 +30,7 @@ mock_causes = [
         "category": "Natural Disasters"
     },
     {
-        "id": "2",
+        "id": "customer-2",
         "title": "Flood Recovery in Louisiana",
         "description": "Help families rebuild after the devastating floods in Louisiana.",
         "goal": 350000,
@@ -38,7 +38,7 @@ mock_causes = [
         "category": "Natural Disasters"
     },
     {
-        "id": "3",
+        "id": "customer-3",
         "title": "Wildfire Relief in California",
         "description": "Provide support for communities affected by the devastating wildfires in California.",
         "goal": 400000,
@@ -46,7 +46,7 @@ mock_causes = [
         "category": "Natural Disasters"
     },
     {
-        "id": "4",
+        "id": "customer-4",
         "title": "Emergency Aid for Gaza",
         "description": "Provide critical humanitarian assistance to civilians caught in the conflict in Gaza.",
         "goal": 750000,
@@ -54,7 +54,7 @@ mock_causes = [
         "category": "Conflict Zone"
     },
     {
-        "id": "5",
+        "id": "customer-5",
         "title": "Ukraine Humanitarian Crisis",
         "description": "Support families displaced by the ongoing conflict in Ukraine with essential aid.", 
         "goal": 1000000,
@@ -63,7 +63,7 @@ mock_causes = [
     },
     # Adding causes from CausesPage.tsx
     {
-        "id": "6",
+        "id": "customer-6",
         "title": "Global Relief Disaster Response",
         "description": "GRN delivers emergency food, shelter, and water within 24 hours of natural disasters. Your donation helps their rapid-response teams reach areas hit by floods, earthquakes, and hurricanes around the world.",
         "goal": 50000,
@@ -71,7 +71,7 @@ mock_causes = [
         "category": "Natural Disasters"
     },
     {
-        "id": "7",
+        "id": "customer-7",
         "title": "Rebuilding After the Storm with ShelterNow",
         "description": "Specializing in post-disaster recovery, ShelterNow helps communities build homes using local labor and sustainable materials. Support long-term recovery after natural catastrophes.",
         "goal": 15000,
@@ -79,7 +79,7 @@ mock_causes = [
         "category": "Natural Disasters"
     },
     {
-        "id": "8",
+        "id": "customer-8",
         "title": "Mobile Clinics For Crisis Zones With HealthBridge",
         "description": "HealthBridge deploys mobile clinics in underserved areas affected by conflicts and pandemics. Every donation fuels life-saving diagnoses and care in real time.",
         "goal": 200000,
@@ -87,7 +87,7 @@ mock_causes = [
         "category": "Health Emergencies"
     },
     {
-        "id": "9",
+        "id": "customer-9",
         "title": "Emergency Aid in Gaza with Humanity Frontline",
         "description": "Providing food, medical aid, and psychological support for families affected by conflict in Gaza. Your donation goes directly to vetted local workers on the ground.",
         "goal": 60000,
@@ -95,7 +95,7 @@ mock_causes = [
         "category": "Conflict Zone"
     },
     {
-        "id": "10",
+        "id": "customer-10",
         "title": "Combating Cholera with CleanMedic Haiti",
         "description": "Fighting the cholera outbreak with emergency IV fluids, antibiotics, and bed treatment. Your contribution supports local nurses and medics on the frontlines.",
         "goal": 220000,
@@ -103,7 +103,7 @@ mock_causes = [
         "category": "Health Emergencies"
     },
     {
-        "id": "11",
+        "id": "customer-11",
         "title": "Feeding Children in Drought with NourishNow",
         "description": "Providing school meals and nutritional support in East Africa where children face severe food insecurity due to drought. $1 can feed a child for a day.",
         "goal": 120000,
