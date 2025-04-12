@@ -21,10 +21,11 @@ def extract_payment_transactions(transactions_response: dict, sender_wallet_addr
     transactions = transactions_response.result.get('transactions', [])
     
     for transaction in transactions:
+        # Create PaymentEdge and let it handle the filtering
         payment_node = PaymentEdge.from_transaction(transaction, sender_wallet_address)
-        if payment_node:
+        if payment_node and payment_node.currency == "RLUSD":
             payment_nodes.append(payment_node)
-            
+    
     return payment_nodes
 
 def print_payment_transactions(payment_nodes: List[PaymentEdge]) -> None:
@@ -34,14 +35,14 @@ def print_payment_transactions(payment_nodes: List[PaymentEdge]) -> None:
     Args:
         payment_nodes: List of PaymentEdge objects to print
     """
-    for i, node in enumerate(payment_nodes, 1):
-        print(f"\nTransaction {i}:")
-        print(f"Hash: {node.transaction_hash}")
-        print(f"Timestamp: {node.timestamp}")
-        print(f"From: {node.sender_address}")
-        print(f"To: {node.receiver_address}")
-        print(f"Amount: {node.delivered_amount} drops")
-        print(f"Fee: {node.fee} drops")
+    # for i, node in enumerate(payment_nodes, 1):
+    #     print(f"\nTransaction {i}:")
+    #     print(f"Hash: {node.transaction_hash}")
+    #     print(f"Timestamp: {node.timestamp}")
+    #     print(f"From: {node.sender_address}")
+    #     print(f"To: {node.receiver_address}")
+    #     print(f"Amount: {node.delivered_amount} drops")
+    #     print(f"Fee: {node.fee} drops")
 
 def get_unique_receivers(consolidated_payment_edges: List[ConsolidatedPaymentEdge]) -> Set[str]:
     """
