@@ -35,7 +35,7 @@ async def get_transaction_history(sender_wallet_address: str) -> List[PaymentEdg
         request = AccountTx(account=sender_wallet_address, ledger_index_max=-1, limit=20)  # Increased limit
         response = await client.request(request)
         
-        # # Print complete response
+        # Print complete response
         # print("\nComplete XRPL Response:")
         # print(json.dumps(response.result, indent=2))
         
@@ -45,8 +45,16 @@ async def get_transaction_history(sender_wallet_address: str) -> List[PaymentEdg
             
         # Extract payment transactions
         payment_edges = extract_payment_transactions(response, sender_wallet_address)
+        
+        # Filter out XRP transactions, only keep RLUSD
+        rlusd_edges = [edge for edge in payment_edges if edge.currency == "RLUSD"]
+        
+        if payment_edges and not rlusd_edges:
+            print(f"\nFound {len(payment_edges)} transactions, but none were RLUSD")
+        elif rlusd_edges:
+            print(f"\nFound {len(rlusd_edges)} RLUSD transactions")
             
-        return payment_edges
+        return rlusd_edges
         
     except Exception as e:
         print("Full error traceback:")
@@ -68,8 +76,8 @@ async def get_consolidated_payment_edges(sender_wallet_address: str) -> List[Con
 
     consolidated_payment_edges = ConsolidatedPaymentEdge.from_payment_edges(payment_nodes)
     print(f"\nConsolidated payment edges:")
-    for edge in consolidated_payment_edges:
-        print("\n" + str(edge))
+    # for edge in consolidated_payment_edges:
+    #     print("\n" + str(edge))
     return consolidated_payment_edges
 
 async def get_all_consolidated_edges(customer_id: str, max_depth: int = 10) -> List[ConsolidatedPaymentEdge]:

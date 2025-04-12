@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
 import uvicorn
+from blockchain.transaction import execute_payment
 from workflow.temporal_client import execute_disaster_workflow
 from blockchain.traces import get_all_consolidated_edges
 from typing import List, Optional
@@ -47,7 +48,12 @@ class DisasterResponse(BaseModel):
 
 class ConsolidatedEdgeResponse(BaseModel):
     sender: str
+    sender_id: Optional[str]
+    sender_name: Optional[str]
     receiver: str
+    receiver_id: Optional[str]
+    receiver_name: Optional[str]
+    currency: str
     payment_type: str
     amounts: List[str]
     hashes: List[str]
@@ -95,6 +101,17 @@ class CustomerDetailsResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class PaymentRequest(BaseModel):
+    sender_id: str
+    receiver_id: str
+    currency: str
+    amount: float
+
+class PaymentResponse(BaseModel):
+    success: bool
+    message: str
+    transaction_hash: Optional[str] = None
 
 # ============================================================================
 # API ENDPOINTS
@@ -153,9 +170,19 @@ async def get_payment_trace(customer_id: str, max_depth: Optional[int] = 10):
         # Convert edges to response format
         response = []
         for edge in edges:
+            # Get sender details
+            sender_details = get_db().get_customer_details_from_wallet(edge.sender)
+            # Get receiver details
+            receiver_details = get_db().get_customer_details_from_wallet(edge.receiver)
+            
             response.append(ConsolidatedEdgeResponse(
                 sender=edge.sender,
+                sender_id=sender_details['customer_id'] if sender_details else None,
+                sender_name=sender_details['name'] if sender_details else None,
                 receiver=edge.receiver,
+                receiver_id=receiver_details['customer_id'] if receiver_details else None,
+                receiver_name=receiver_details['name'] if receiver_details else None,
+                currency=edge.currency,
                 payment_type=edge.payment_type,
                 amounts=edge.amounts,
                 hashes=edge.hashes,
@@ -374,6 +401,46 @@ async def health_check():
         dict: A simple status message
     """
     return {"status": "healthy"}
+
+@app.post("/payment", response_model=PaymentResponse)
+async def execute_payment_endpoint(payment_request: PaymentRequest):
+    """
+    Execute a payment transaction between two customers.
+    
+    Args:
+        payment_request: Payment details including sender, receiver, currency, and amount
+        
+    Returns:
+        PaymentResponse with success status and transaction details
+    """
+    try:
+        # Execute the payment
+        success, transaction_hash = await execute_payment(
+            sender_id=payment_request.sender_id,
+            beneficiary_id=payment_request.receiver_id,
+            currency=payment_request.currency,
+            amount=payment_request.amount
+        )
+        
+        if success:
+            return PaymentResponse(
+                success=True,
+                message="Payment executed successfully",
+                transaction_hash=transaction_hash
+            )
+        else:
+            return PaymentResponse(
+                success=False,
+                message="Payment failed",
+                transaction_hash=transaction_hash
+            )
+            
+    except Exception as e:
+        logger.error(f"Error executing payment: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error executing payment: {str(e)}"
+        )
 
 # ============================================================================
 # MAIN ENTRY POINT

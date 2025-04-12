@@ -2,7 +2,7 @@
 Database module for managing application data.
 """
 
-from typing import Optional, List
+from typing import Optional, List, Dict
 from enum import Enum
 from sqlalchemy import create_engine, Column, String, ForeignKey, Enum as SQLEnum, Numeric, event, DateTime, Integer
 from sqlalchemy.ext.declarative import declarative_base
@@ -560,6 +560,44 @@ class Database:
             session.rollback()
             logger.error(f"Error updating total donations: {str(e)}")
             raise
+        finally:
+            session.close()
+
+    def get_customer_details_from_wallet(self, wallet_address: str) -> Optional[Dict[str, str]]:
+        """
+        Get customer details by wallet address, joining customers and customer_details tables.
+        
+        Args:
+            wallet_address: The wallet address to look up
+            
+        Returns:
+            Dictionary containing customer_id, wallet_address, and name, or None if not found
+        """
+        session = self.Session()
+        try:
+            # Join customers and customer_details tables
+            result = session.query(
+                Customer.customer_id,
+                Customer.wallet_address,
+                CustomerDetails.name
+            ).join(
+                CustomerDetails,
+                Customer.customer_id == CustomerDetails.customer_id
+            ).filter(
+                Customer.wallet_address == wallet_address
+            ).first()
+            
+            if result:
+                return {
+                    'customer_id': result.customer_id,
+                    'wallet_address': result.wallet_address,
+                    'name': result.name
+                }
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error getting customer details from wallet: {str(e)}")
+            return None
         finally:
             session.close()
 

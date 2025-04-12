@@ -1,0 +1,24 @@
+Deposits
+Customer, Amount, fund, time, filled, transaction_hash, donation-id
+donor-1, 500, sender-1, 5:50pm, 250, asdf3qe12334, 123
+donor-2, 250, sender-1, 5:51pm, 250, asdf3qe12334, 124
+donor-3, 100, sender-2, 5:52pm, 50, asdf3qe12333, 125
+donor-1, 500, sender-1, 5:53pm, 0, asdf3qe12331, 126
+
+
+
+transactions table
+transaction_hash, sender_id, receiver_id, amount, currency, transaction_type, status
+asdf3qe12334, sender-1, receiver-1, 600, RLUSD, PAYMENT, SUCCESS, 7:00pm
+
+
+notifications table
+donation_id, donor-id, filled_amount, time, email_sent
+123, donor-1, 250, 7:00pm, TRUE
+124, donor-2, 250, 7:00pm, TRUE
+125, donor-3, 50, 7:00pm, TRUE
+
+
+
+
+
