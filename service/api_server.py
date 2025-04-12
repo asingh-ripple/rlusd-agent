@@ -238,30 +238,23 @@ async def get_all_customers_balances():
             detail=f"Error retrieving customer balances: {str(e)}"
         )
 
-@app.get("/customers/{customer_id}/details", response_model=List[CustomerDetailsResponse])
-async def get_customer_details(customer_id: str):
+@app.get("/causes/{cause_id}", response_model=CauseDetailsResponse)
+async def get_cause_details(cause_id: str):
     """Get all customer details with a left join between customers and customer_details tables."""
     try:
-        # Get all customers
-        customers = get_customer(customer_id)
+        cause = db.get_cause(cause_id)
+        # customer = db.get_customer(cause.customer_id)
         
         # Convert to response format
-        response = []
-        for customer in customers:
-            # Get customer details if they exist
-            
-            customer_dict = {
-                "customer_id": customer.customer_id,
-                "customer_type": customer.customer_type,
-                "wallet_address": customer.wallet_address,
-                "email": customer.email_address,
-                "name": details.name if details else None,
-                "goal": details.goal if details else None,
-                "description": details.description if details else None,
-                "total_donations": details.total_donations if details else None,
-                "amount_raised": details.amount_raised if details else None
-            }
-            response.append(customer_dict)
+        cause_dict = {
+            "cause_id": cause.cause_id,
+            "name": cause.name,
+            "goal": cause.goal,
+            "description": cause.description,
+            "imageUrl": cause.imageUrl,
+            "category": cause.category,
+            "customer_id": cause.customer_id
+        }
         
         return CauseDetailsResponse(**cause_dict)
     except Exception as e:
