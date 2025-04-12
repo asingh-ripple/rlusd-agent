@@ -81,6 +81,56 @@ class Customer(Base):
                                  cascade="all, delete-orphan")
     details = relationship("CustomerDetails", back_populates="customer", uselist=False, cascade="all, delete-orphan")
 
+class Donations(Base):
+    """Model for tracking donations."""
+    __tablename__ = "donations"
+
+    donation_id = Column(String(50), primary_key=True)
+    customer_id = Column(String(50), ForeignKey("customers.customer_id", ondelete="CASCADE"), nullable=False)
+    cause_id = Column(String(50), ForeignKey("causes.cause_id", ondelete="CASCADE"), nullable=False)
+    amount = Column(Numeric(20, 6), nullable=False)  # 20 digits total, 6 decimal places
+    currency = Column(String, nullable=False)
+    donation_date = Column(DateTime, nullable=False, default=datetime.utcnow)
+    # Relationships
+    customer = relationship("Customer", foreign_keys=[customer_id], back_populates="donations")
+    cause = relationship("Cause", foreign_keys=[cause_id], back_populates="donations")
+    status = Column(SQLEnum(DonationStatus), nullable=False)
+
+class DonationStatus(str, Enum):
+    """Enum for donation status."""
+    PENDING = "PENDING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+
+class Disbursements(Base):
+    """Model for tracking disbursements."""
+    __tablename__ = "disbursements"
+
+    disbursement_id = Column(String(50), primary_key=True)
+    cause_id = Column(String(50), ForeignKey("causes.cause_id", ondelete="CASCADE"), nullable=False)
+    amount = Column(Numeric(20, 6), nullable=False)  # 20 digits total, 6 decimal places
+    currency = Column(String, nullable=False)
+    disbursement_date = Column(DateTime, nullable=False, default=datetime.utcnow)
+    status = Column(SQLEnum(DisbursementStatus), nullable=False)
+    # Relationships
+    cause = relationship("Cause", foreign_keys=[cause_id], back_populates="disbursements")
+
+class Disbursements_Donations(Base):
+    """Model for tracking disbursements and donations."""
+    __tablename__ = "disbursements_donations"
+
+    disbursement_id = Column(String(50), ForeignKey("disbursements.disbursement_id", ondelete="CASCADE"), primary_key=True)
+    donation_id = Column(String(50), ForeignKey("donations.donation_id", ondelete="CASCADE"), primary_key=True)
+    # Relationships
+    disbursement = relationship("Disbursement", foreign_keys=[disbursement_id], back_populates="donations")
+    donation = relationship("Donation", foreign_keys=[donation_id], back_populates="disbursements")
+
+class DisbursementStatus(str, Enum):
+    """Enum for disbursement status."""
+    PENDING = "PENDING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+
 class CustomerRelationship(Base):
     """Model for tracking relationships between customers."""
     __tablename__ = "customer_relationships"
@@ -168,22 +218,20 @@ class Check(Base):
     sender = relationship("Customer", foreign_keys=[sender_id], back_populates="checks_sent")
     receiver = relationship("Customer", foreign_keys=[receiver_id], back_populates="checks_received")
 
-class CustomerDetails(Base):
-    """Model for storing additional customer details."""
-    __tablename__ = "customer_details"
+class Cause(Base):
+    """Model for storing causes."""
+    __tablename__ = "causes"
 
-    customer_id = Column(String(50), ForeignKey("customers.customer_id", ondelete="CASCADE"), primary_key=True)
+    cause_id = Column(String(50), ForeignKey("causes.cause_id", ondelete="CASCADE"), primary_key=True)
     name = Column(String(255), nullable=False)
-    goal = Column(Numeric(20, 6), nullable=False)  # 20 digits total, 6 decimal places
-    description = Column(String(500), nullable=False)
-    total_donations = Column(Integer, default=0)
-    amount_raised = Column(Integer)  # New column for tracking amount raised
-    
+    description = Column(String, nullable=False)
+    imageUrl = Column(String, nullable=False)
+    category = Column(String, nullable=False)
     # Relationship
     customer = relationship("Customer", back_populates="details")
 
     def __repr__(self):
-        return f"<CustomerDetails(customer_id={self.customer_id}, name={self.name}, goal={self.goal}, amount_raised={self.amount_raised})>"
+        return f"<Cause(cause_id={self.cause_id}, name={self.name}, description={self.description}, imageUrl={self.imageUrl}, category={self.category})>"
 
 class Database:
     """Database manager for wallet operations."""
