@@ -5,13 +5,15 @@ from blockchain.transaction import execute_payment
 from workflow.temporal_client import execute_disaster_workflow
 from blockchain.traces import get_all_consolidated_edges
 from typing import List, Optional
-from db.database import get_db, Customer, CustomerType, CustomerDetails
+from db.database import get_db, Customer, CustomerType, Donations, DonationStatus
 from enum import Enum
 from blockchain.payment_edge import ConsolidatedPaymentEdge
 from blockchain.balance import get_formatted_balance
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from config.logger_config import setup_logger
+from datetime import datetime
+import uuid
 
 logger = setup_logger(__name__)
 # ============================================================================
@@ -112,6 +114,28 @@ class PaymentResponse(BaseModel):
     success: bool
     message: str
     transaction_hash: Optional[str] = None
+
+class DonationRequest(BaseModel):
+    """Request model for donation registration."""
+    customer_id: str
+    cause_id: str
+    amount: float
+    currency: str = "RLUSD"
+
+class DonationResponse(BaseModel):
+    """Response model for donation registration."""
+    donation_id: str
+    customer_id: str
+    cause_id: str
+    amount: float
+    currency: str
+    donation_date: datetime
+    status: DonationStatus
+    success: bool
+    message: str
+
+    class Config:
+        from_attributes = True
 
 # ============================================================================
 # API ENDPOINTS
@@ -261,36 +285,6 @@ async def get_all_customers_balances():
             detail=f"Error retrieving customer balances: {str(e)}"
         )
 
-@app.get("/customers/details", response_model=List[CustomerDetailsResponse])
-async def get_customer_details():
-    """Get all customer details with a left join between customers and customer_details tables."""
-    try:
-        # Get all customers
-        customers = get_db().get_all_customers()
-        
-        # Convert to response format
-        response = []
-        for customer in customers:
-            # Get customer details if they exist
-            details = get_db().get_customer_details(customer.customer_id)
-            
-            customer_dict = {
-                "customer_id": customer.customer_id,
-                "customer_type": customer.customer_type,
-                "wallet_address": customer.wallet_address,
-                "email": customer.email_address,
-                "name": details.name if details else None,
-                "goal": details.goal if details else None,
-                "description": details.description if details else None,
-                "total_donations": details.total_donations if details else None,
-                "amount_raised": details.amount_raised if details else None
-            }
-            response.append(customer_dict)
-        
-        return response
-    except Exception as e:
-        logger.error(f"Error retrieving customer details: {e}")
-        raise HTTPException(status_code=500, detail=f"Error retrieving customer details: {str(e)}")
 
 @app.get("/customers", response_model=CustomersResponse)
 async def get_all_customers():
@@ -441,6 +435,54 @@ async def execute_payment_endpoint(payment_request: PaymentRequest):
             status_code=500,
             detail=f"Error executing payment: {str(e)}"
         )
+
+@app.post("/donate", response_model=DonationResponse)
+async def register_donation(request: DonationRequest):
+    """
+    Register a new donation in the database.
+    
+    Args:
+        request: DonationRequest containing customer_id, cause_id, amount, and currency
+        
+    Returns:
+        DonationResponse with complete donation details, success status, and message
+    """
+    try:
+        # Get database instance
+        db = get_db()
+        
+        # Insert donation using the database function
+        donation_id = db.insert_donation(
+            customer_id=request.customer_id,
+            cause_id=request.cause_id,
+            amount=request.amount,
+            currency=request.currency
+        )
+        
+        # Get the complete donation object
+        session = db.Session()
+        try:
+            donation = session.query(Donations).filter_by(donation_id=donation_id).first()
+            if not donation:
+                raise HTTPException(status_code=500, detail="Donation not found after insertion")
+            
+            return DonationResponse(
+                donation_id=donation.donation_id,
+                customer_id=donation.customer_id,
+                cause_id=donation.cause_id,
+                amount=donation.amount,
+                currency=donation.currency,
+                donation_date=donation.donation_date,
+                status=donation.status,
+                success=True,
+                message="Donation registered successfully"
+            )
+        finally:
+            session.close()
+            
+    except Exception as e:
+        logger.error(f"Error in donation registration: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error registering donation: {str(e)}")
 
 # ============================================================================
 # MAIN ENTRY POINT

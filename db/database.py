@@ -10,6 +10,7 @@ from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.engine import Engine
 from config.logger_config import setup_logger
 from datetime import datetime
+import uuid
 
 logger = setup_logger(__name__)
 
@@ -91,15 +92,12 @@ class Donations(Base):
     __tablename__ = "donations"
 
     donation_id = Column(String(50), primary_key=True)
-    customer_id = Column(String(50), ForeignKey("customers.customer_id", ondelete="CASCADE"), nullable=False)
-    cause_id = Column(String(50), ForeignKey("causes.cause_id", ondelete="CASCADE"), nullable=False)
+    customer_id = Column(String(50), nullable=False)
+    cause_id = Column(String(50), nullable=False)
     amount = Column(Numeric(20, 6), nullable=False)  # 20 digits total, 6 decimal places
     currency = Column(String, nullable=False)
     donation_date = Column(DateTime, nullable=False, default=datetime.utcnow)
     status = Column(SQLEnum(DonationStatus), nullable=False)
-    # Relationships
-    # customer = relationship("Customer", foreign_keys=[customer_id], back_populates="donations")
-    # cause = relationship("Cause", foreign_keys=[cause_id], back_populates="donations_list")
 
 class DisbursementStatus(str, Enum):
     """Enum for disbursement status."""
@@ -651,6 +649,56 @@ class Database:
         except Exception as e:
             logger.error(f"Error getting customer details from wallet: {str(e)}")
             return None
+        finally:
+            session.close()
+
+    def insert_donation(self, 
+                    customer_id: str,
+                    cause_id: str,
+                    amount: float,
+                    currency: str = "RLUSD") -> str:
+        """
+        Insert a new donation into the database.
+        
+        Args:
+            customer_id: ID of the donating customer
+            cause_id: ID of the cause being donated to
+            amount: Donation amount
+            currency: Currency (defaults to "RLUSD")
+            
+        Returns:
+            str: The generated donation_id
+            
+        Raises:
+            Exception: If there's an error inserting the donation
+        """
+        session = self.Session()
+        try:
+            # Generate a random donation ID
+            donation_id = str(uuid.uuid4())
+            
+            # Create new donation record
+            donation = Donations(
+                donation_id=donation_id,
+                customer_id=customer_id,
+                cause_id=cause_id,
+                amount=amount,
+                currency=currency,
+                donation_date=datetime.utcnow(),
+                status=DonationStatus.PENDING
+            )
+            
+            # Add to database
+            session.add(donation)
+            session.commit()
+            
+            logger.info(f"Successfully registered donation {donation_id} for customer {customer_id} to cause {cause_id}")
+            return donation_id
+            
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Error inserting donation: {str(e)}")
+            raise
         finally:
             session.close()
 

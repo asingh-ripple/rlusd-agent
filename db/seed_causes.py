@@ -112,32 +112,11 @@ mock_causes = [
     }
 ]
 
-def recreate_tables():
-    """Drop and recreate all tables"""
-    try:
-        print(f"Connecting to database: {DB_CONNECTION_STRING}")
-        engine = create_engine(DB_CONNECTION_STRING)
-        
-        # Drop all tables
-        print("Dropping all tables...")
-        Base.metadata.drop_all(engine)
-        print("Successfully dropped all tables.")
-        
-        # Create all tables, including the updated Cause model
-        print("Creating all tables...")
-        Base.metadata.create_all(engine)
-        print("Successfully created all tables.")
-        
-        return engine
-    except Exception as e:
-        print(f"Error recreating tables: {str(e)}")
-        traceback.print_exc()
-        return None
 
 def seed_causes():
     """Seed the causes table with mock data"""
     print("Starting database setup...")
-    engine = recreate_tables()
+    engine = create_engine(DB_CONNECTION_STRING)
     if not engine:
         print("Failed to setup database, aborting.")
         return
