@@ -13,8 +13,9 @@ sys.path.append(project_root)
 
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker
-from db.database import Customer, CustomerType, get_db
+from db.database import Customer, CustomerType, get_db, init_db
 from db.sqlite_config import get_connection_string
+from db.config import SQLITE_URL
 from config.logger_config import setup_logger
 from datetime import datetime
 
@@ -100,6 +101,7 @@ SEED_CUSTOMERS = [
 
 def add_customers():
     """Delete all existing customers and add seed customers."""
+    init_db(SQLITE_URL)
     db = get_db()
     session = db.Session()
     
