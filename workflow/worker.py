@@ -8,7 +8,12 @@ sys.path.insert(0, project_root)
 
 from temporalio.client import Client
 from temporalio.worker import Worker
-from workflow.disaster_analysis_workflow import DisasterMonitorWorkflow, blockchain_activity, analyze_disaster_activity
+from workflow.disaster_analysis_workflow import (
+    DisasterMonitorWorkflow,
+    blockchain_activity,
+    analyze_disaster_activity,
+    insert_disaster_analysis
+)
 from config.logger_config import setup_logger
 
 # Use the centralized logger
@@ -23,7 +28,7 @@ async def main():
         client,
         task_queue="disaster-monitor-queue",
         workflows=[DisasterMonitorWorkflow],
-        activities=[analyze_disaster_activity, blockchain_activity],
+        activities=[analyze_disaster_activity, blockchain_activity, insert_disaster_analysis],
     )
     
     # Start the worker

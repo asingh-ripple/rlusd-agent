@@ -7,6 +7,8 @@ from datetime import datetime, timedelta, UTC
 from config.tools_config import SEARCH_CONFIG, AID_ESTIMATION_CONFIG
 from config.llm_config import get_configured_llm
 from config.logger_config import setup_logger
+from langchain_community.tools import DuckDuckGoSearchResults
+
 
 # Configure logging
 logger = setup_logger(__name__)
@@ -32,42 +34,10 @@ def get_news(search_query: str) -> Dict[str, Any]:
     logger.info(f"TOOL CALLING: get_news(search_query: {search_query})")
     
     try:
-        # Initialize GoogleNews with English language and worldwide region
-        googlenews = GoogleNews(lang='en', region='US')
-        
-        # Set time range for the last day
-        end_date = datetime.now(UTC)
-        start_date = end_date - timedelta(days=SEARCH_CONFIG["default_start_date_delta"])
-        googlenews.set_time_range(start_date.strftime('%m/%d/%Y'), end_date.strftime('%m/%d/%Y'))
-        googlenews.set_encode('utf-8')
-        
-        # Search for news and get multiple pages
-        googlenews.search(search_query)
-        results = []
-        for page in range(1, SEARCH_CONFIG["max_pages"] + 1):
-            results.extend(googlenews.page_at(page))
-        
-        # Format results
-        formatted_results = []
-        for result in results:
-            formatted_result = {
-                'title': result.get('title', ''),
-                'link': result.get('link', ''),
-                'snippet': result.get('desc', '')[:1000],  # Limit snippet length
-                'source': result.get('media', ''),
-                'date': result.get('date', '')
-            }
-            formatted_results.append(formatted_result)
-        
-        logger.info(f"FOUND: {len(formatted_results)} news articles")
-        return {
-            'status': 'success',
-            'count': len(formatted_results),
-            'results': formatted_results,
-            'query': search_query,
-            'timestamp': datetime.now(UTC).isoformat(),
-            'link': formatted_results[0]['link'] if formatted_results else None
-        }
+        search = DuckDuckGoSearchResults()
+        result = search.invoke(search_query)
+        logger.info(f"SEARCH RESULT: {result}")
+        return result
             
     except Exception as e:
         logger.error(f"ERROR: Search failed: {str(e)}")
