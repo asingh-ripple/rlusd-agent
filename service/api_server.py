@@ -4,7 +4,7 @@ import uvicorn
 from workflow.temporal_client import execute_disaster_workflow
 from blockchain.traces import get_all_consolidated_edges
 from typing import List, Optional
-from db.database import get_db, Customer, CustomerType, Cause
+from db.database import get_db, Customer, CustomerType, Donations, DonationStatus
 from enum import Enum
 from blockchain.payment_edge import ConsolidatedPaymentEdge
 from blockchain.balance import get_formatted_balance
@@ -12,6 +12,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from config.logger_config import setup_logger
 from fastapi.middleware.cors import CORSMiddleware
+from datetime import datetime
+import uuid
 
 logger = setup_logger(__name__)
 # ============================================================================
@@ -111,6 +113,49 @@ class CauseDetailsResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class PaymentRequest(BaseModel):
+    sender_id: str
+    receiver_id: str
+    currency: str
+    amount: float
+
+class DisbursementInfo(BaseModel):
+    donation_id: str
+    customer_id: str
+    original_amount: float
+    amount: float
+
+class PaymentResponse(BaseModel):
+    success: bool
+    message: str
+    transaction_hash: Optional[str] = None
+    disbursements: List[DisbursementInfo] = []
+
+    class Config:
+        from_attributes = True
+
+class DonationRequest(BaseModel):
+    """Request model for donation registration."""
+    customer_id: str
+    cause_id: str
+    amount: float
+    currency: str = "RLUSD"
+
+class DonationResponse(BaseModel):
+    """Response model for donation registration."""
+    donation_id: str
+    customer_id: str
+    cause_id: str
+    amount: float
+    currency: str
+    donation_date: datetime
+    status: DonationStatus
+    success: bool
+    message: str
+
+    class Config:
+        from_attributes = True
+
 # ============================================================================
 # API ENDPOINTS
 # ============================================================================
@@ -170,7 +215,12 @@ async def get_payment_trace(customer_id: str, max_depth: Optional[int] = 10):
         for edge in edges:
             response.append(ConsolidatedEdgeResponse(
                 sender=edge.sender,
+                sender_id=sender_details.customer_id if sender_details and sender_details.customer_id else "Unknown",
+                sender_name=sender_details.customer_name if sender_details and sender_details.customer_name else "Unknown",
                 receiver=edge.receiver,
+                receiver_id=receiver_details.customer_id if receiver_details and receiver_details.customer_id else "Unknown",
+                receiver_name=receiver_details.customer_name if receiver_details and receiver_details.customer_name else "Unknown",
+                currency=edge.currency,
                 payment_type=edge.payment_type,
                 amounts=edge.amounts,
                 hashes=edge.hashes,
@@ -404,6 +454,103 @@ async def health_check():
         dict: A simple status message
     """
     return {"status": "healthy"}
+
+@app.post("/disburse", response_model=PaymentResponse)
+async def execute_payment_endpoint(payment_request: PaymentRequest):
+    """
+    Execute a payment transaction between two customers.
+    
+    Args:
+        payment_request: Payment details including sender, receiver, currency, and amount
+        
+    Returns:
+        PaymentResponse with success status, transaction details, and disbursement information
+    """
+    try:
+        # Execute the payment
+        success, transaction_hash, disbursements = await execute_payment(
+            sender_id=payment_request.sender_id,
+            beneficiary_id=payment_request.receiver_id,
+            currency=payment_request.currency,
+            amount=payment_request.amount
+        )
+        
+        if success:
+            return PaymentResponse(
+                success=True,
+                message="Payment executed successfully",
+                transaction_hash=transaction_hash,
+                disbursements=[
+                    DisbursementInfo(
+                        donation_id=d['donation_id'],
+                        customer_id=d['customer_id'],
+                        original_amount=d['original_amount'],
+                        amount=d['amount']
+                    ) for d in disbursements
+                ]
+            )
+        else:
+            return PaymentResponse(
+                success=False,
+                message="Payment failed",
+                transaction_hash=transaction_hash,
+                disbursements=[]
+            )
+            
+    except Exception as e:
+        logger.error(f"Error executing payment: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error executing payment: {str(e)}"
+        )
+
+@app.post("/donate", response_model=DonationResponse)
+async def register_donation(request: DonationRequest):
+    """
+    Register a new donation in the database.
+    
+    Args:
+        request: DonationRequest containing customer_id, cause_id, amount, and currency
+        
+    Returns:
+        DonationResponse with complete donation details, success status, and message
+    """
+    try:
+        # Get database instance
+        db = get_db()
+        
+        # Insert donation using the database function
+        donation_id = db.insert_donation(
+            customer_id=request.customer_id,
+            cause_id=request.cause_id,
+            amount=request.amount,
+            currency=request.currency
+        )
+        
+        # Get the complete donation object
+        session = db.Session()
+        try:
+            donation = session.query(Donations).filter_by(donation_id=donation_id).first()
+            if not donation:
+                raise HTTPException(status_code=500, detail="Donation not found after insertion")
+            
+            return DonationResponse(
+                donation_id=donation.donation_id,
+                customer_id=donation.customer_id,
+                cause_id=donation.cause_id,
+                amount=donation.amount,
+                currency=donation.currency,
+                donation_date=donation.donation_date,
+                status=donation.status,
+                success=True,
+                message="Donation registered successfully"
+            )
+        finally:
+            session.close()
+            
+    except Exception as e:
+        logger.error(f"Error in donation registration: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error registering donation: {str(e)}")
 
 # ============================================================================
 # MAIN ENTRY POINT

@@ -5,6 +5,8 @@ Script to run all seeding operations.
 
 import os
 import sys
+import argparse
+import traceback
 
 # Add the parent directory to the path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -40,9 +42,16 @@ def reset_database():
         traceback.print_exc()
         return False
 
-def run_all_seeds():
-    """Run all seed operations"""
+def run_all_seeds(reset: bool = False):
+    """Run all seed operations
+    
+    Args:
+        reset: If True, drop and recreate all tables before seeding
+    """
     print("Starting database seeding process...")
+    
+    if reset:
+        reset_database()
     
     # Seed the causes table
     seed_causes()
@@ -52,4 +61,8 @@ def run_all_seeds():
     print("Database seeding completed successfully!")
 
 if __name__ == "__main__":
-    run_all_seeds() 
+    parser = argparse.ArgumentParser(description='Run database seeding operations')
+    parser.add_argument('--reset', action='store_true', help='Reset database before seeding')
+    args = parser.parse_args()
+    
+    run_all_seeds(reset=args.reset) 

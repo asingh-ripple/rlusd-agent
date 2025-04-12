@@ -2,7 +2,7 @@
 XRPL transaction operations.
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List, Tuple
 from xrpl.models.transactions import Payment
 from xrpl.asyncio.transaction import submit_and_wait
 from xrpl.models.requests import Tx
@@ -10,11 +10,21 @@ from config.logger_config import setup_logger
 from .client import get_client
 from .wallet import get_wallet_pair, get_wallet_balance
 from workflow.workflow_models import DisasterQuery
-from db.database import TransactionStatus, TransactionType, init_db, get_db
+from db.database import (
+    TransactionStatus, 
+    TransactionType, 
+    init_db, 
+    get_db, 
+    Donations, 
+    DonationStatus,
+    DisbursementsDonations
+)
 from db.sqlite_config import get_connection_string
 import asyncio
 from xrpl.models.transactions import Payment
 from xrpl.asyncio.transaction import submit_and_wait
+import uuid
+from datetime import datetime
 
 # Set up logging
 logger = setup_logger(__name__)
@@ -84,6 +94,117 @@ async def create_wallet_transaction(query: DisasterQuery, response: Dict[str, An
 
     return payment_response.result
 
+def process_disbursement(cause_id: str, amount: float, transaction_hash: str) -> List[Dict[str, Any]]:
+    """
+    Process disbursement for a cause with the given amount.
+    
+    Args:
+        cause_id: The cause ID to process donations for
+        amount: The amount available for disbursement
+        transaction_hash: The hash of the transaction that triggered this disbursement
+        
+    Returns:
+        List of disbursement records created
+    """
+    print(f"\nProcessing disbursement:")
+    print(f"  Cause ID: {cause_id}")
+    print(f"  Amount: {amount} RLUSD")
+    print(f"  Transaction Hash: {transaction_hash}")
+    
+    db = get_db()
+    session = db.Session()
+    disbursements_created = []
+    
+    try:
+        # Get all donations in database for debugging
+        all_donations = session.query(Donations).all()
+        print("\nAll donations in database:")
+        for donation in all_donations:
+            print(f"  - ID: {donation.donation_id}")
+            print(f"    Customer: {donation.customer_id}")
+            print(f"    Cause: {donation.cause_id}")
+            print(f"    Status: {donation.status}")
+            print(f"    Amount: {donation.amount} {donation.currency}")
+        
+        # Get pending donations for the cause
+        pending_donations = session.query(Donations).filter(
+            Donations.cause_id == cause_id,
+            Donations.status == DonationStatus.PENDING
+        ).order_by(Donations.donation_date.asc()).all()
+        
+        if not pending_donations:
+            print(f"No pending donations found for cause {cause_id}")
+            return []
+            
+        print("\nPending donations:")
+        for donation in pending_donations:
+            print(f"  - ID: {donation.donation_id}")
+            print(f"    Customer: {donation.customer_id}")
+            print(f"    Amount: {donation.amount} {donation.currency}")
+            print(f"    Status: {donation.status}")
+        
+        # Calculate disbursements
+        remaining_amount = float(amount)
+        
+        for donation in pending_donations:
+            if remaining_amount <= 0:
+                break
+                
+            # Calculate fulfillment amount
+            donation_amount = float(donation.amount)
+            fulfillment_amount = min(donation_amount, remaining_amount)
+            
+            # Create disbursement record
+            disbursement = DisbursementsDonations(
+                id=str(uuid.uuid4()),
+                donation_id=donation.donation_id,
+                disbursement_id=transaction_hash,
+                cause_id=cause_id,
+                donor_id=donation.customer_id,
+                amount=fulfillment_amount,
+                created_at=datetime.utcnow()
+            )
+            session.add(disbursement)
+            disbursements_created.append({
+                'donation_id': donation.donation_id,
+                'customer_id': donation.customer_id,
+                'original_amount': donation_amount,
+                'amount': fulfillment_amount
+            })
+            print(f"Created disbursement for donation {donation.donation_id}: {fulfillment_amount} RLUSD")
+            
+            # Update donation status
+            if fulfillment_amount >= donation_amount:
+                donation.status = DonationStatus.COMPLETED
+            
+            remaining_amount -= fulfillment_amount
+        
+        # Print disbursement results
+        print("\nDisbursement results:")
+        for disbursement in disbursements_created:
+            print(f"  - Donation ID: {disbursement['donation_id']}")
+            print(f"    Customer: {disbursement['customer_id']}")
+            print(f"    Original Amount: {disbursement['original_amount']} RLUSD")
+            print(f"    Amount to Fulfill: {disbursement['amount']} RLUSD")
+        
+        # Print summary
+        unique_donors = set(d['customer_id'] for d in disbursements_created)
+        total_amount = sum(d['amount'] for d in disbursements_created)
+        print(f"\nUnique donors: {unique_donors}")
+        print(f"Total amount disbursed: {total_amount} RLUSD")
+        print("-" * 50)
+        
+        session.commit()
+        print("Successfully recorded disbursements")
+        return disbursements_created
+        
+    except Exception as e:
+        session.rollback()
+        print(f"Error processing disbursement: {str(e)}")
+        raise
+    finally:
+        session.close()
+
 async def execute_payment(sender_id, beneficiary_id, currency, amount):
     """
     Sends RLUSD from a wallet to a destination address
@@ -95,7 +216,7 @@ async def execute_payment(sender_id, beneficiary_id, currency, amount):
     amount: Amount to send
     
     Returns:
-        Tuple of (success: bool, transaction_hash: Optional[str])
+        Tuple of (success: bool, transaction_hash: Optional[str], disbursements: List[Dict[str, Any]])
     """
     try:
         # Get wallet pair
@@ -136,6 +257,8 @@ async def execute_payment(sender_id, beneficiary_id, currency, amount):
         if response.is_successful():
             print("\nPayment successful!")
             print(f"Transaction hash: {response.result['hash']}")
+            
+            # Insert transaction record
             db.insert_transaction(
                 transaction_hash=response.result['hash'],
                 sender_id=sender_id,
@@ -145,15 +268,29 @@ async def execute_payment(sender_id, beneficiary_id, currency, amount):
                 transaction_type=TransactionType.PAYMENT,
                 status=TransactionStatus.SUCCESS
             )
-            return True, response.result['hash']
+            
+            # Process disbursements
+            disbursements = []
+            try:
+                disbursements = process_disbursement(
+                    cause_id=beneficiary_id,
+                    amount=amount,
+                    transaction_hash=response.result['hash']
+                )
+                print(f"Created {len(disbursements)} disbursement records")
+            except Exception as e:
+                print(f"Error processing disbursements: {str(e)}")
+                # Continue since payment was successful
+            
+            return True, response.result['hash'], disbursements
         else:
             print("\nPayment failed")
             print(f"Error: {response.result.get('engine_result_message')}")
-            return False, None
+            return False, None, []
             
     except Exception as e:
         print(f"\nError sending payment: {str(e)}")
-        return False, None
+        return False, None, []
 
 async def main():
     await execute_payment(sender_id="sender-1", beneficiary_id="receiver-1", currency="RLUSD", amount=1)

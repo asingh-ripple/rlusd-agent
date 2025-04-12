@@ -23,6 +23,7 @@ DB_CONNECTION_STRING = f"sqlite:///{DB_PATH}"
 mock_customers = [
     {
         "customer_id": "customer-1",
+        "customer_name": "Global Relief Fund",
         "wallet_seed": "sEdV58GZ9wgCeK8jNpn4LCw5Ge3r9jqGN",
         "wallet_address": "rExYJzCiX3U8PnM5SEKpYJCKP5nHqX7Pnh",
         "email_address": "sender1@example.com",
@@ -30,6 +31,7 @@ mock_customers = [
     },
     {
         "customer_id": "customer-2",
+        "customer_name": "Flood Recovery in Louisiana",
         "wallet_seed": "sEdVr8KtMdyMKxGGC7MQgS5xQfzWSC2VS",
         "wallet_address": "r9LqwNgJMSKG8kHgCKsCHiYUGoPgKsZjcY",
         "email_address": "sender2@example.com",
@@ -37,6 +39,7 @@ mock_customers = [
     },
     {
         "customer_id": "customer-3",
+        "customer_name": "Hurricane Harvey Relief",
         "wallet_seed": "sEdVG1xwsB4pMU2w6M9DF9K4qA6Pakvji",
         "wallet_address": "rMVQiVRUXEGEiQrHHi2SyAKqV6Xdmvds8N",
         "email_address": "receiver1@example.com",

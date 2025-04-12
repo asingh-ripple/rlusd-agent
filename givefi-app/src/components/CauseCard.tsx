@@ -6,7 +6,7 @@ import { formatCurrency, calculatePercentage } from '../utils/helpers';
 // Import the Cause interface
 interface Cause {
   id: string;
-  title: string;
+  name: string;
   description: string;
   goal: number;
   raised: number;
@@ -19,89 +19,6 @@ interface CauseCardProps {
   cause: Cause;
   expanded?: boolean;
 }
-
-// const CauseCard: React.FC<CauseCardProps> = ({ cause, expanded = false }) => {
-//   const [isExpanded, setIsExpanded] = useState<boolean>(expanded);
-//   const [imageError, setImageError] = useState<boolean>(false);
-  
-//   const descriptionLength = isExpanded ? 300 : 120;
-//   const progressPercentage = calculatePercentage(cause.raised, cause.goal);
-  
-//   const toggleExpand = (e: React.MouseEvent) => {
-//     e.preventDefault();
-//     e.stopPropagation();
-//     setIsExpanded(!isExpanded);
-//   };
-  
-//   const handleImageError = () => {
-//     setImageError(true);
-//   };
-  
-//   return (
-//     <div className={`cause-card ${isExpanded ? 'expanded' : ''}`}>
-//       <div className="cause-image">
-//         <img 
-//           src={imageError ? '/images/causes/placeholder.svg' : cause.imageUrl} 
-//           alt={cause.title}
-//           onError={handleImageError}
-//         />
-//         <div className="cause-category">
-//           <span>{cause.category}</span>
-//         </div>
-//       </div>
-      
-//       <div className="cause-content">
-//         <h3 className="cause-title">{cause.title}</h3>
-        
-//         <div className="cause-description-container">
-//           <p className="cause-description">
-//             {cause.description.length > descriptionLength && !isExpanded
-//               ? `${cause.description.substring(0, descriptionLength)}...`
-//               : cause.description}
-//           </p>
-//           {cause.description.length > 120 && (
-//             <button 
-//               className="expand-toggle" 
-//               onClick={toggleExpand}
-//               aria-label={isExpanded ? "Show less" : "Show more"}
-//             >
-//               {isExpanded ? "Show less" : "Show more"}
-//             </button>
-//           )}
-//         </div>
-        
-//         <div className="cause-progress">
-//           <div className="progress-info">
-//             <span className="progress-percentage">{Math.round(progressPercentage)}% funded</span>
-//             <span className="progress-ratio">{formatCurrency(cause.raised)} of {formatCurrency(cause.goal)}</span>
-//           </div>
-//           <div className="progress-bar">
-//             <div 
-//               className="progress-fill" 
-//               style={{ width: `${progressPercentage}%` }}
-//               role="progressbar"
-//               aria-valuenow={progressPercentage}
-//               aria-valuemin={0}
-//               aria-valuemax={100}
-//             ></div>
-//           </div>
-//         </div>
-        
-//         <div className="cause-stats">
-//           <div className="donations-count">
-//             <span className="donations-number">{cause.donations}</span>
-//             <span className="donations-label">Donations</span>
-//           </div>
-//           <Link to={`/causes/${cause.id}`} className="view-details-button">
-//             VIEW DETAILS
-//           </Link>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default CauseCard; 
 
 const CauseCard: React.FC<CauseCardProps> = ({ cause, expanded = false }) => {
   const [isExpanded, setIsExpanded] = useState<boolean>(expanded);
@@ -122,7 +39,7 @@ const CauseCard: React.FC<CauseCardProps> = ({ cause, expanded = false }) => {
         <div className="h-44 relative overflow-hidden">
           <img 
             src={cause.imageUrl} 
-            alt={cause.title}
+            alt={cause.name}
             className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
           />
           <div className="absolute top-3 left-3 z-10">
@@ -136,7 +53,7 @@ const CauseCard: React.FC<CauseCardProps> = ({ cause, expanded = false }) => {
         <div className="p-5 flex flex-col gap-3">
           {/* Title with proper overflow handling */}
           <h3 className={`text-lg font-bold text-gray-900 leading-tight ${!isExpanded ? 'line-clamp-2' : ''}`}>
-            {cause.title}
+            {cause.name}
           </h3>
           
           {/* Description with expand/collapse functionality */}

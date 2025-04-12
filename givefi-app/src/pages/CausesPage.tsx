@@ -4,7 +4,7 @@ import './CausesPage.css';
 import { image } from '../utils/helpers';
 // Define the Cause interface
 interface Cause {
-  title: string;
+  name: string;
   description: string;
   goal: number;
   raised: number;
@@ -13,21 +13,6 @@ interface Cause {
   category: string;
   cause_id: string;
 }
-
-// const fetchCauses = async () => {
-//   try {
-//     // Mock API call - in a real app, this would be a real API endpoint
-//     setTimeout(() => {
-//       setCauses(mockCauses);
-//       setLoading(false);
-//     }, 1000);
-//   } catch (error) {
-//     console.error('Error fetching causes:', error);
-//     setLoading(false);
-//   }
-// };
-
-// fetchCauses();
 
 const CausesPage: React.FC = () => {
   const [causes, setCauses] = useState<Cause[]>([]);
@@ -76,8 +61,8 @@ const CausesPage: React.FC = () => {
           </div>
         </div>
         
-        {/* Page Title */}
-        <div className="page-title">
+        {/* Page name */}
+        <div className="page-name">
           <h1>All Causes</h1>
           <p>Browse all our active causes and make an impact today.</p>
         </div>
@@ -115,7 +100,7 @@ const CausesPage: React.FC = () => {
                   <div className="cause-image">
                     <img 
                       src={image[cause.imageUrl]} 
-                      alt={cause.title}
+                      alt={cause.name}
                       onError={(e) => {
                         // Fallback to placeholder if image fails to load
                         const target = e.target as HTMLImageElement;
@@ -128,7 +113,7 @@ const CausesPage: React.FC = () => {
                     <div className="cause-category">
                       <span>{cause.category}</span>
                     </div>
-                    <h3 className="cause-title">{cause.title}</h3>
+                    <h3 className="cause-name">{cause.name}</h3>
                     <p className="cause-description">{cause.description}</p>
                     
                     <div className="progress-container">
@@ -170,7 +155,7 @@ const CausesPage: React.FC = () => {
 // const mockCauses: Cause[] = [
 //   {
 //     id: 1,
-//     title: "Global Relief Disaster Response",
+//     name: "Global Relief Disaster Response",
 //     description: "GRN delivers emergency food, shelter, and water within 24 hours of natural disasters. Your donation helps their rapid-response teams reach areas hit by floods, earthquakes, and hurricanes around the world.",
 //     goal: 50000,
 //     raised: 27400,
@@ -180,7 +165,7 @@ const CausesPage: React.FC = () => {
 //   },
 //   {
 //     id: 2,
-//     title: "Rebuilding After the Storm with ShelterNow",
+//     name: "Rebuilding After the Storm with ShelterNow",
 //     description: "Specializing in post-disaster recovery, ShelterNow helps communities build homes using local labor and sustainable materials. Support long-term recovery after natural catastrophes.",
 //     goal: 15000,
 //     raised: 12200,
@@ -190,7 +175,7 @@ const CausesPage: React.FC = () => {
 //   },
 //   {
 //     id: 3,
-//     title: "Mobile Clinics For Crisis Zones With HealthBridge",
+//     name: "Mobile Clinics For Crisis Zones With HealthBridge",
 //     description: "HealthBridge deploys mobile clinics in underserved areas affected by conflicts and pandemics. Every donation fuels life-saving diagnoses and care in real time.",
 //     goal: 200000,
 //     raised: 87000,
@@ -200,7 +185,7 @@ const CausesPage: React.FC = () => {
 //   },
 //   {
 //     id: 4,
-//     title: "Emergency Aid in Gaza with Humanity Frontline",
+//     name: "Emergency Aid in Gaza with Humanity Frontline",
 //     description: "Providing food, medical aid, and psychological support for families affected by conflict in Gaza. Your donation goes directly to vetted local workers on the ground.",
 //     goal: 60000,
 //     raised: 32500,
@@ -210,7 +195,7 @@ const CausesPage: React.FC = () => {
 //   },
 //   {
 //     id: 5,
-//     title: "Combating Cholera with CleanMedic Haiti",
+//     name: "Combating Cholera with CleanMedic Haiti",
 //     description: "Fighting the cholera outbreak with emergency IV fluids, antibiotics, and bed treatment. Your contribution supports local nurses and medics on the frontlines.",
 //     goal: 220000,
 //     raised: 80000,
@@ -220,7 +205,7 @@ const CausesPage: React.FC = () => {
 //   },
 //   {
 //     id: 6,
-//     title: "Feeding Children in Drought with NourishNow",
+//     name: "Feeding Children in Drought with NourishNow",
 //     description: "Providing school meals and nutritional support in East Africa where children face severe food insecurity due to drought. $1 can feed a child for a day.",
 //     goal: 120000,
 //     raised: 35000,
