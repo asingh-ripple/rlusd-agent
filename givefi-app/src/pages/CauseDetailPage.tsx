@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import {  } from 'react-router-dom';
 import './CauseDetailPage.css';
 
 // Components
 import DonationForm from '../components/DonationForm';
 
 // Utils
-import { formatCurrency, calculatePercentage, formatDate, getShareableUrl, getSocialShareUrls } from '../utils/helpers';
+import { formatCurrency, calculatePercentage, formatDate, getShareableUrl, getSocialShareUrls, image } from '../utils/helpers';
 
 // Define the Cause interface for type safety
 export interface Cause {
-  id: string;
-  title: string;
+  cause_id: string;
+  name: string;
   description: string;
   goal: number;
   raised: number;
@@ -32,7 +33,7 @@ interface Update {
 }
 
 interface RelatedCause {
-  id: string;
+  cause_id: string;
   title: string;
   imageUrl: string;
   category: string;
@@ -73,33 +74,30 @@ const aboutOrg = {
 };
 
 const CauseDetailPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const params = useParams();
   const [cause, setCause] = useState<Cause | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<'story' | 'updates'>('story');
 
+  const fetchCause = async (causeId: string): Promise<Cause> => {
+    // In a real application, this would be an API call
+    
+  return fetch(`http://localhost:8000/causes/${causeId}`)
+    .then(response => response.json())
+  };
+
   useEffect(() => {
     // Simulate API call to get cause details
-    const fetchCauseDetails = async () => {
-      setLoading(true);
-      try {
-        // In a real application, this would be a fetch request to your API
-        // For now, we'll use mock data
-        setTimeout(() => {
-          const foundCause = mockCauses.find(cause => cause.id === id);
-          if (foundCause) {
-            setCause(foundCause);
-          }
-          setLoading(false);
-        }, 800);
-      } catch (error) {
-        console.error("Error fetching cause details:", error);
-        setLoading(false);
-      }
-    };
-
-    fetchCauseDetails();
-  }, [id]);
+    const causeIdString = params.id || '';
+    fetchCause(causeIdString).then(cause => {
+      console.log(cause);
+      setCause(cause);
+      setLoading(false);
+    }).catch(error => {
+      console.error('Error fetching cause details:', error);
+      setLoading(false);
+    });
+  }, [params.id]);
 
   const handleDonationSubmit = (amount: number, paymentMethod: string, formData: any) => {
     // In a real app, this would submit to a payment processor
@@ -132,8 +130,8 @@ const CauseDetailPage: React.FC = () => {
   }
 
   const progressPercentage = calculatePercentage(cause.raised, cause.goal);
-  const shareUrl = getShareableUrl(cause.id);
-  const socialUrls = getSocialShareUrls(shareUrl, cause.title);
+  const shareUrl = getShareableUrl(cause.cause_id);
+  const socialUrls = getSocialShareUrls(shareUrl, cause.name);
 
   return (
     <div className="cause-detail-page">
@@ -145,14 +143,14 @@ const CauseDetailPage: React.FC = () => {
             <span className="breadcrumb-separator">/</span>
             <Link to="/causes" className="breadcrumb-link">Causes</Link>
             <span className="breadcrumb-separator">/</span>
-            <span className="breadcrumb-current">{cause.title}</span>
+            <span className="breadcrumb-current">{cause.name}</span>
           </div>
         </div>
 
         {/* Hero section */}
         <div className="cause-hero">
           <div className="cause-hero-image">
-            <img src={cause.imageUrl} alt={cause.title} />
+            <img src={image[cause.imageUrl]} alt={cause.name} />
           </div>
         </div>
 
@@ -164,7 +162,7 @@ const CauseDetailPage: React.FC = () => {
               <div className="cause-category">
                 <span>{cause.category}</span>
               </div>
-              <h1 className="cause-title">{cause.title}</h1>
+              <h1 className="cause-title">{cause.name || ' BLAH!!!!'}</h1>
               <p className="cause-description">{cause.description}</p>
             </div>
 
@@ -287,7 +285,7 @@ const CauseDetailPage: React.FC = () => {
           <div className="cause-detail-sidebar">
             {/* Donation form */}
             <DonationForm 
-              causeTitle={cause.title}
+              causeTitle={cause.name}
               onSubmit={handleDonationSubmit}
             />
 
@@ -298,8 +296,8 @@ const CauseDetailPage: React.FC = () => {
                 <div className="related-causes-list">
                   {cause.relatedCauses.map(relatedCause => (
                     <Link 
-                      to={`/causes/${relatedCause.id}`} 
-                      key={relatedCause.id}
+                      to={`/causes/${relatedCause.cause_id}`} 
+                      key={relatedCause.cause_id}
                       className="related-cause-card"
                     >
                       <div className="related-cause-image">
@@ -349,105 +347,5 @@ const CauseDetailPage: React.FC = () => {
     </div>
   );
 };
-
-// Mock data for development and testing
-const mockCauses: Cause[] = [
-  {
-    id: "1",
-    title: "Hurricane Relief in Florida",
-    description: "Support communities affected by the recent devastating hurricane in Florida.",
-    story: "The recent category 5 hurricane that struck the Florida coast has left thousands of families without homes, access to clean water, or electricity. The destruction has been unprecedented, with entire neighborhoods swept away by storm surges and high winds.\n\nEmergency services are stretched thin, and many communities in rural areas remain cut off due to infrastructure damage. These families need immediate assistance with temporary shelter, food supplies, clean water, and medical attention.\n\nYour donation will directly support the deployment of emergency response teams, provision of temporary shelters, distribution of clean water and food supplies, and medical assistance to those injured or displaced by the hurricane.\n\nWe're working with local authorities and community leaders to ensure aid reaches those most in need as quickly as possible. Every dollar makes a difference in helping these communities begin the long process of recovery and rebuilding.",
-    goal: 500000,
-    raised: 342000,
-    donations: 2547,
-    imageUrl: "https://images.unsplash.com/photo-1569427575831-317b45c7a130?auto=format&fit=crop&q=80&w=1000",
-    category: "Natural Disasters",
-    updates: [
-      {
-        id: "u1",
-        date: "October 15, 2023",
-        title: "First Emergency Supplies Delivered",
-        content: "Thanks to your generous donations, we've delivered the first batch of emergency supplies to affected communities in Tampa Bay area. This includes 5,000 gallons of clean water, 2,000 meal kits, and 500 emergency blankets."
-      },
-      {
-        id: "u2",
-        date: "October 10, 2023",
-        title: "Emergency Response Teams Deployed",
-        content: "We've successfully deployed 5 emergency response teams to the most affected areas. These teams are currently assessing the damage and coordinating with local authorities to distribute aid effectively."
-      }
-    ],
-    relatedCauses: [
-      {
-        id: "2",
-        title: "Flood Recovery in Louisiana",
-        imageUrl: "https://images.unsplash.com/photo-1583488630027-58f4c80c74ff?auto=format&fit=crop&q=80&w=1000",
-        category: "Natural Disasters"
-      },
-      {
-        id: "3",
-        title: "Wildfire Relief in California",
-        imageUrl: "https://images.unsplash.com/photo-1602496849540-bf8fa67a6ef2?auto=format&fit=crop&q=80&w=1000",
-        category: "Natural Disasters"
-      }
-    ]
-  },
-  {
-    id: "2",
-    title: "Flood Recovery in Louisiana",
-    description: "Help families rebuild after the devastating floods in Louisiana.",
-    story: "Louisiana has experienced one of the worst flooding events in recent history, with record-breaking rainfall causing rivers to overflow and levees to breach. Thousands of homes and businesses are now underwater, and many families have lost everything they own.\n\nThe situation is especially dire for low-income communities that were already struggling before this disaster. Many residents did not have flood insurance and now face the impossible task of rebuilding their lives from scratch.\n\nYour donation will fund critical recovery efforts including debris removal, home repairs, replacement of essential household items, and support for temporary housing while homes are being restored. We're also providing mental health services to help survivors cope with the trauma of this disaster.\n\nBy contributing to this cause, you're giving hope to families who are facing the darkest moment of their lives. Together, we can help Louisiana communities recover and rebuild stronger than before.",
-    goal: 350000,
-    raised: 125000,
-    donations: 843,
-    imageUrl: "https://images.unsplash.com/photo-1583488630027-58f4c80c74ff?auto=format&fit=crop&q=80&w=1000",
-    category: "Natural Disasters",
-    updates: [
-      {
-        id: "u1",
-        date: "September 28, 2023",
-        title: "Temporary Housing Units Secured",
-        content: "We've secured 50 temporary housing units for families whose homes were completely destroyed. The first 15 families will be moving in this week."
-      }
-    ],
-    relatedCauses: [
-      {
-        id: "1",
-        title: "Hurricane Relief in Florida",
-        imageUrl: "https://images.unsplash.com/photo-1569427575831-317b45c7a130?auto=format&fit=crop&q=80&w=1000",
-        category: "Natural Disasters"
-      }
-    ]
-  },
-  {
-    id: "3",
-    title: "Wildfire Relief in California",
-    description: "Provide support for communities affected by the devastating wildfires in California.",
-    goal: 400000,
-    raised: 278000,
-    donations: 1892,
-    imageUrl: "https://images.unsplash.com/photo-1602496849540-bf8fa67a6ef2?auto=format&fit=crop&q=80&w=1000",
-    category: "Natural Disasters"
-  },
-  {
-    id: "4",
-    title: "Emergency Aid for Gaza",
-    description: "Provide critical humanitarian assistance to civilians caught in the conflict in Gaza.",
-    goal: 750000,
-    raised: 523000,
-    donations: 4271,
-    imageUrl: "https://images.unsplash.com/photo-1628511954475-4fc8b0ed4193?auto=format&fit=crop&q=80&w=1000",
-    category: "Conflict Zone"
-  },
-  {
-    id: "5",
-    title: "Ukraine Humanitarian Crisis",
-    description: "Support families displaced by the ongoing conflict in Ukraine with essential aid.",
-    goal: 1000000,
-    raised: 867000,
-    donations: 7423,
-    imageUrl: "https://images.unsplash.com/photo-1655123613624-56376576e4a5?auto=format&fit=crop&q=80&w=1000",
-    category: "Conflict Zone"
-  }
-];
 
 export default CauseDetailPage; 

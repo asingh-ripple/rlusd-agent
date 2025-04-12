@@ -1,3 +1,11 @@
+import flood from '../public/images/flood-recovery.jpg';
+import emergency from '../public/images/emergency-aid.jpg';
+import rebuild from '../public/images/rebuild-after.jpg';
+import mobile from '../public/images/mobile-clinics.jpg';
+import global from '../public/images/global-relief.jpg';
+import combating from '../public/images/combating.jpg';
+// import hurricane from '../public/images/hurricane-relief.jpg';
+
 /**
  * Format a number as currency
  * @param amount - The amount to format
@@ -87,3 +95,13 @@ export const getSocialShareUrls = (url: string, title: string): Record<string, s
     email: `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(`Check out this cause: ${url}`)}`,
   };
 }; 
+
+export const image: Record<string, string> = {
+  'images/flood-recovery.jpg': flood,
+  'images/emergency-aid.jpg': emergency,
+  'images/rebuild-after.jpg': rebuild,
+  'images/mobile-clinics.jpg': mobile,
+  'images/global-relief.jpg': global,
+  'images/combating.jpg': combating,
+  // 'images/hurricane-relief.jpg': hurricane
+}

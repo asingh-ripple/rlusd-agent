@@ -2,28 +2,38 @@ import React, { useState, useEffect } from 'react';
 import Hero from '../components/Hero';
 import './HomePage.css';
 import { Cause } from './CauseDetailPage'; // Import Cause interface
+import { image } from '../utils/helpers';
+// import conflict from '../public/images/conflict.jpg';
+// import health from '../public/images/health.jpg';
+// import natural from '../public/images/natural.jpg';
+// import water from '../public/images/water.jpg';
+// import hurricane from '../public/images/hurricane-relief.jpg';
+
 
 const HomePage: React.FC = () => {
   const [latestCauses, setLatestCauses] = useState<Cause[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
+  const fetchCauses = async (): Promise<Cause[]> => {
+    // In a real application, this would be an API call
+    
+  return fetch("http://localhost:8000/causes")
+    .then(response => response.json())
+  };
+
   useEffect(() => {
     // Simulate fetching causes data
-    const fetchCauses = async () => {
-      try {
-        // In a real application, this would be an API call
-        setTimeout(() => {
-          setLatestCauses(mockCauses.slice(0, 3)); // Only show first 3 causes
+      console.log(process.env.PUBLIC_URL);
+        console.log("Fetching causes...");
+        setLoading(true);
+        fetchCauses().then(causes => {
+          console.log(causes.slice(0, 3));
+          setLatestCauses(causes.slice(0, 3));
           setLoading(false);
-        }, 800);
-        
-      } catch (error) {
-        console.error('Error fetching causes:', error);
-        setLoading(false);
-      }
-    };
-
-    fetchCauses();
+        }).catch(error => {
+          console.error('Error fetching causes:', error);
+          setLoading(false);
+        });
   }, []);
 
   return (
@@ -109,12 +119,12 @@ const LatestCauses: React.FC<LatestCausesProps> = ({ causes, loading }) => {
         </div>
         
         <div className="causes-grid">
-          {causes.map((cause) => (
-            <div key={cause.id} className="cause-card">
+          {causes.map((cause: Cause) => (
+            <div key={cause.cause_id} className="cause-card">
               <div className="cause-image">
                 <img 
-                  src={cause.imageUrl || '/images/causes/placeholder.svg'} 
-                  alt={cause.title}
+                  src={image[cause.imageUrl]} 
+                  alt={cause.name}
                   onError={(e) => {
                     // Fallback to placeholder if image fails to load
                     const target = e.target as HTMLImageElement;
@@ -127,7 +137,7 @@ const LatestCauses: React.FC<LatestCausesProps> = ({ causes, loading }) => {
                 <div className="cause-category">
                   <span>{cause.category}</span>
                 </div>
-                <h3 className="cause-title">{cause.title}</h3>
+                <h3 className="cause-title">{cause.name}</h3>
                 <p className="cause-description">
                   {typeof cause.description === 'string' 
                     ? `${cause.description.substring(0, 120)}...`
@@ -154,7 +164,7 @@ const LatestCauses: React.FC<LatestCausesProps> = ({ causes, loading }) => {
                   </div>
                 </div>
                 
-                <a href={`/causes/${cause.id}`} className="view-details-button">
+                <a href={`/causes/${cause.cause_id}`} className="view-details-button">
                   VIEW DETAILS
                 </a>
               </div>
@@ -165,59 +175,5 @@ const LatestCauses: React.FC<LatestCausesProps> = ({ causes, loading }) => {
     </section>
   );
 };
-
-// Mock data for development
-const mockCauses: Cause[] = [
-  {
-    id: "1",
-    title: "Hurricane Relief in Florida",
-    description: "Support communities affected by the recent devastating hurricane in Florida.",
-    goal: 500000,
-    raised: 342000,
-    donations: 2547,
-    imageUrl: "https://images.unsplash.com/photo-1569427575831-317b45c7a130?auto=format&fit=crop&q=80&w=1000",
-    category: "Natural Disasters"
-  },
-  {
-    id: "2",
-    title: "Flood Recovery in Louisiana",
-    description: "Help families rebuild after the devastating floods in Louisiana.",
-    goal: 350000,
-    raised: 125000,
-    donations: 843,
-    imageUrl: "https://images.unsplash.com/photo-1583488630027-58f4c80c74ff?auto=format&fit=crop&q=80&w=1000",
-    category: "Natural Disasters"
-  },
-  {
-    id: "3",
-    title: "Wildfire Relief in California",
-    description: "Provide support for communities affected by the devastating wildfires in California.",
-    goal: 400000,
-    raised: 278000,
-    donations: 1892,
-    imageUrl: "https://images.unsplash.com/photo-1602496849540-bf8fa67a6ef2?auto=format&fit=crop&q=80&w=1000",
-    category: "Natural Disasters"
-  },
-  {
-    id: "4",
-    title: "Emergency Aid for Gaza",
-    description: "Provide critical humanitarian assistance to civilians caught in the conflict in Gaza.",
-    goal: 750000,
-    raised: 523000,
-    donations: 4271,
-    imageUrl: "https://images.unsplash.com/photo-1628511954475-4fc8b0ed4193?auto=format&fit=crop&q=80&w=1000",
-    category: "Conflict Zone"
-  },
-  {
-    id: "5",
-    title: "Ukraine Humanitarian Crisis",
-    description: "Support families displaced by the ongoing conflict in Ukraine with essential aid.",
-    goal: 1000000,
-    raised: 867000,
-    donations: 7423,
-    imageUrl: "https://images.unsplash.com/photo-1655123613624-56376576e4a5?auto=format&fit=crop&q=80&w=1000",
-    category: "Conflict Zone"
-  }
-];
 
 export default HomePage; 

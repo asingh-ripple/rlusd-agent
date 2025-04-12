@@ -16,10 +16,6 @@ const Navbar: React.FC = () => {
           <Link to="/about" className="nav-link">About</Link>
           <Link to="/contact" className="nav-link">Contact</Link>
         </div>
-        
-        <div className="navbar-actions">
-          <Link to="/donate" className="donate-btn">Donate Now</Link>
-        </div>
       </div>
     </nav>
   );
