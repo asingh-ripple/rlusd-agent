@@ -5,7 +5,7 @@ from blockchain.transaction import execute_payment
 from workflow.temporal_client import execute_disaster_workflow
 from blockchain.traces import get_all_consolidated_edges
 from typing import List, Optional
-from db.database import get_db, Customer, CustomerType, CustomerDetails
+from db.database import get_db, Customer, CustomerType, Cause
 from enum import Enum
 from blockchain.payment_edge import ConsolidatedPaymentEdge
 from blockchain.balance import get_formatted_balance
@@ -26,6 +26,8 @@ app = FastAPI(
     description="API for monitoring and analyzing disaster situations",
     version="1.0.0"
 )
+
+db = get_db()
 
 # ============================================================================
 # DATA MODELS
@@ -212,7 +214,6 @@ async def get_all_customers_balances():
     """
     try:
         print("\nGetting all customers...")
-        customers = get_db().get_all_customers()
         print(f"Found {len(customers) if customers else 0} customers")
         
         if not customers:
@@ -261,18 +262,17 @@ async def get_all_customers_balances():
             detail=f"Error retrieving customer balances: {str(e)}"
         )
 
-@app.get("/customers/details", response_model=List[CustomerDetailsResponse])
-async def get_customer_details():
+@app.get("/customers/{customer_id}/details", response_model=List[CustomerDetailsResponse])
+async def get_customer_details(customer_id: str):
     """Get all customer details with a left join between customers and customer_details tables."""
     try:
         # Get all customers
-        customers = get_db().get_all_customers()
+        customers = get_customer(customer_id)
         
         # Convert to response format
         response = []
         for customer in customers:
             # Get customer details if they exist
-            details = get_db().get_customer_details(customer.customer_id)
             
             customer_dict = {
                 "customer_id": customer.customer_id,
@@ -304,7 +304,6 @@ async def get_all_customers():
         HTTPException: If there's an error retrieving customers
     """
     try:
-        customers = get_db().get_all_customers()
         if not customers:
             return CustomersResponse(customers=[])
             
@@ -337,7 +336,6 @@ async def get_customer(customer_id: str):
     """
     try:
         print(f"Attempting to get customer with ID: {customer_id}")
-        db = get_db()
         print(f"Database instance: {db}")
         
         # First check if customer exists
@@ -374,7 +372,7 @@ async def create_customer(customer: CreateCustomerRequest):
     """
     try:
         # Insert customer into database
-        get_db().insert_customer(
+        db.insert_customer(
             customer_id=customer.customer_id,
             email_address=customer.email_address,
             wallet_address=customer.wallet_address
