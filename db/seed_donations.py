@@ -33,7 +33,7 @@ def seed_donations(should_clear: bool = False) -> None:
             Donations(
                 donation_id="donation-1",
                 customer_id="donor-1",
-                cause_id="customer-2",
+                cause_id="2",
                 amount=500.00,
                 currency="USD",
                 status=DonationStatus.PENDING,
@@ -42,18 +42,18 @@ def seed_donations(should_clear: bool = False) -> None:
             Donations(
                 donation_id="donation-2",
                 customer_id="donor-2",
-                cause_id="customer-2",
+                cause_id="2",
                 amount=500.00,
                 currency="USD",
                 status=DonationStatus.PENDING,
                 donation_date=datetime.now() - timedelta(days=4)
             ),
             
-            # Pending donations for customer-2
+            # Pending donations for 2
             Donations(
                 donation_id="donation-3",
                 customer_id="donor-3",
-                cause_id="customer-2",
+                cause_id="2",
                 amount=200.00,
                 currency="USD",
                 status=DonationStatus.PENDING,
@@ -62,7 +62,7 @@ def seed_donations(should_clear: bool = False) -> None:
             Donations(
                 donation_id="donation-4",
                 customer_id="donor-4",
-                cause_id="customer-2",
+                cause_id="2",
                 amount=250.00,
                 currency="USD",
                 status=DonationStatus.PENDING,
