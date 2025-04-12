@@ -55,32 +55,30 @@ class Customer(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    sent_transactions = relationship("CustomerRelationship", 
-                                   foreign_keys="CustomerRelationship.sender_id",
-                                   back_populates="sender",
-                                   cascade="all, delete-orphan")
-    received_transactions = relationship("CustomerRelationship",
-                                       foreign_keys="CustomerRelationship.receiver_id",
-                                       back_populates="receiver",
-                                       cascade="all, delete-orphan")
-    transactions_sent = relationship("Transaction", 
-                                   foreign_keys="Transaction.sender_id",
-                                   back_populates="sender",
-                                   cascade="all, delete-orphan")
-    transactions_received = relationship("Transaction",
-                                       foreign_keys="Transaction.receiver_id",
-                                       back_populates="receiver",
-                                       cascade="all, delete-orphan")
-    checks_sent = relationship("Check",
-                             foreign_keys="Check.sender_id",
-                             back_populates="sender",
-                             cascade="all, delete-orphan")
-    checks_received = relationship("Check",
-                                 foreign_keys="Check.receiver_id",
-                                 back_populates="receiver",
-                                 cascade="all, delete-orphan")
-    details = relationship("Cause", back_populates="customer", uselist=False, cascade="all, delete-orphan")
-
+    # sent_transactions = relationship("CustomerRelationship", 
+    #                                foreign_keys="CustomerRelationship.sender_id",
+    #                                back_populates="sender",
+    #                                cascade="all, delete-orphan")
+    # received_transactions = relationship("CustomerRelationship",
+    #                                    foreign_keys="CustomerRelationship.receiver_id",
+    #                                    back_populates="receiver",
+    #                                    cascade="all, delete-orphan")
+    # transactions_sent = relationship("Transaction", 
+    #                                foreign_keys="Transaction.sender_id",
+    #                                back_populates="sender",
+    #                                cascade="all, delete-orphan")
+    # transactions_received = relationship("Transaction",
+    #                                    foreign_keys="Transaction.receiver_id",
+    #                                    back_populates="receiver",
+    #                                    cascade="all, delete-orphan")
+    # checks_sent = relationship("Check",
+    #                          foreign_keys="Check.sender_id",
+    #                          back_populates="sender",
+    #                          cascade="all, delete-orphan")
+    # checks_received = relationship("Check",
+    #                              foreign_keys="Check.receiver_id",
+    #                              back_populates="receiver",
+    #                              cascade="all, delete-orphan")
 
 class DonationStatus(str, Enum):
     """Enum for donation status."""
@@ -98,11 +96,10 @@ class Donations(Base):
     amount = Column(Numeric(20, 6), nullable=False)  # 20 digits total, 6 decimal places
     currency = Column(String, nullable=False)
     donation_date = Column(DateTime, nullable=False, default=datetime.utcnow)
-    # Relationships
-    customer = relationship("Customer", foreign_keys=[customer_id], back_populates="donations")
-    cause = relationship("Cause", foreign_keys=[cause_id], back_populates="donations")
     status = Column(SQLEnum(DonationStatus), nullable=False)
-
+    # Relationships
+    # customer = relationship("Customer", foreign_keys=[customer_id], back_populates="donations")
+    # cause = relationship("Cause", foreign_keys=[cause_id], back_populates="donations_list")
 
 class DisbursementStatus(str, Enum):
     """Enum for disbursement status."""
@@ -121,7 +118,7 @@ class Disbursements(Base):
     disbursement_date = Column(DateTime, nullable=False, default=datetime.utcnow)
     status = Column(SQLEnum(DisbursementStatus), nullable=False)
     # Relationships
-    cause = relationship("Cause", foreign_keys=[cause_id], back_populates="disbursements")
+    # cause = relationship("Cause", foreign_keys=[cause_id], back_populates="disbursements_list")
 
 class Disbursements_Donations(Base):
     """Model for tracking disbursements and donations."""
@@ -131,8 +128,8 @@ class Disbursements_Donations(Base):
     donation_id = Column(String(50), ForeignKey("donations.donation_id", ondelete="CASCADE"), primary_key=True)
     amount = Column(Numeric(20, 6), nullable=False)  # 20 digits total, 6 decimal places
     # Relationships
-    disbursement = relationship("Disbursement", foreign_keys=[disbursement_id], back_populates="donations")
-    donation = relationship("Donation", foreign_keys=[donation_id], back_populates="disbursements")
+    # disbursement = relationship("Disbursement", foreign_keys=[disbursement_id], back_populates="donations")
+    # donation = relationship("Donation", foreign_keys=[donation_id], back_populates="disbursements")
 
 class CustomerRelationship(Base):
     """Model for tracking relationships between customers."""
@@ -142,8 +139,8 @@ class CustomerRelationship(Base):
     receiver_id = Column(String, ForeignKey("customers.customer_id", ondelete="CASCADE"), primary_key=True)
     
     # Relationships
-    sender = relationship("Customer", foreign_keys=[sender_id], back_populates="sent_transactions")
-    receiver = relationship("Customer", foreign_keys=[receiver_id], back_populates="received_transactions")
+    # sender = relationship("Customer", foreign_keys=[sender_id], back_populates="sent_transactions")
+    # receiver = relationship("Customer", foreign_keys=[receiver_id], back_populates="received_transactions")
 
 class Transaction(Base):
     """Model for tracking transactions between customers."""
@@ -159,8 +156,8 @@ class Transaction(Base):
     insertion_date = Column(DateTime, nullable=False, default=datetime.utcnow)
     
     # Relationships
-    sender = relationship("Customer", foreign_keys=[sender_id], back_populates="transactions_sent")
-    receiver = relationship("Customer", foreign_keys=[receiver_id], back_populates="transactions_received")
+#    sender = relationship("Customer", foreign_keys=[sender_id], back_populates="transactions_sent")
+#    receiver = relationship("Customer", foreign_keys=[receiver_id], back_populates="transactions_received")
 
     def insert_transaction(self, 
                        transaction_hash: str,
@@ -218,23 +215,24 @@ class Check(Base):
     check_type = Column(SQLEnum(CheckType), nullable=False, default=CheckType.CHECK_CREATE)
     
     # Relationships
-    sender = relationship("Customer", foreign_keys=[sender_id], back_populates="checks_sent")
-    receiver = relationship("Customer", foreign_keys=[receiver_id], back_populates="checks_received")
+#    sender = relationship("Customer", foreign_keys=[sender_id], back_populates="checks_sent")
+#    receiver = relationship("Customer", foreign_keys=[receiver_id], back_populates="checks_received")
 
 class Cause(Base):
     """Model for storing causes."""
     __tablename__ = "causes"
 
-    cause_id = Column(String(50), ForeignKey("causes.cause_id", ondelete="CASCADE"), primary_key=True)
+    cause_id = Column(String(50), primary_key=True)
     name = Column(String(255), nullable=False)
     description = Column(String, nullable=False)
     imageUrl = Column(String, nullable=False)
     category = Column(String, nullable=False)
     goal = Column(Numeric(20, 6), nullable=False)  # 20 digits total, 6 decimal places
-    # Relationship
-    customer = relationship("Customer", back_populates="details")
-    donations = relationship("Donation", back_populates="cause")
-    disbursements = relationship("Disbursement", back_populates="cause")
+    
+    # Relationships (without customer_id foreign key for now)
+    ## customer = relationship("Customer", back_populates="details")
+#    donations_list = relationship("Donations", back_populates="cause")
+#    disbursements_list = relationship("Disbursements", back_populates="cause")
 
     def __repr__(self):
         return f"<Cause(cause_id={self.cause_id}, name={self.name}, description={self.description}, imageUrl={self.imageUrl}, category={self.category})>"
@@ -634,17 +632,17 @@ class Database:
             result = session.query(
                 Customer.customer_id,
                 Customer.wallet_address,
-                CustomerDetails.name
+                Cause.name
             ).join(
-                CustomerDetails,
-                Customer.customer_id == CustomerDetails.customer_id
+                Cause,
+                Customer.customer_id == Cause.customer_id
             ).filter(
                 Customer.wallet_address == wallet_address
             ).first()
             
             if result:
                 return {
-                    'customer_id': result.customer_id,
+                    'cause_id': result.cause_id,
                     'wallet_address': result.wallet_address,
                     'name': result.name
                 }
