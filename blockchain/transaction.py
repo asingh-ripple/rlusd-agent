@@ -222,7 +222,7 @@ async def execute_payment(sender_id, beneficiary_id, currency, amount):
         # Get wallet pair
         sender_wallet, receiver_wallet = await get_wallet_pair(sender_id, beneficiary_id)
         currency = currency.upper()
-        if currency == "RLUSD":
+        if currency == "RLUSD" or currency == "USD":
             # Convert currency code to hex
             currency_hex = "524C555344000000000000000000000000000000"  # Hex for "RLUSD"
             issuer_address = "rQhWct2fv4Vc4KRjRgMrxa8xPN9Zx9iLKV"

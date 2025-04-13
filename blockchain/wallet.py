@@ -29,8 +29,10 @@ async def get_wallet_pair(customer_id: str, beneficiary_id: str) -> Tuple[Wallet
         Tuple[Wallet, Wallet]: The sender and receiver wallets
     """
     try:
-        sender_wallet = Wallet.from_seed(db.get_customer_seed(customer_id))
-        receiver_wallet = Wallet.from_seed(db.get_customer_seed(beneficiary_id))
+        sender_seed = db.get_customer_seed(customer_id)
+        sender_wallet = Wallet.from_seed(sender_seed)
+        receiver_seed = db.get_customer_seed(beneficiary_id)
+        receiver_wallet = Wallet.from_seed(receiver_seed)
         return sender_wallet, receiver_wallet
     except Exception as e:
         logger.error(f"Error fetching wallet pair: {str(e)}")
