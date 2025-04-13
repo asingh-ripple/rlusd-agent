@@ -809,7 +809,7 @@ class Database:
             session.close()
 
 
-    def insert_disaster_response(
+    def upsert_disaster_response(
         self,
         customer_id: str,
         beneficiary_id: str,
@@ -828,11 +828,12 @@ class Database:
         is_valid: bool,
         reasoning: str,
         validation_reasoning: str,
-        summarized_news: Optional[str] = None,
-        news_link: Optional[str] = None
+        summarized_news: Optional[str] = None
     ) -> str:
         """
-        Insert a new disaster response into the database.
+        Insert or update a disaster response in the database.
+        If a response exists for the given customer_id and beneficiary_id, it will be updated.
+        Otherwise, a new response will be created.
         
         Args:
             customer_id: ID of the customer
@@ -856,48 +857,100 @@ class Database:
             news_link: link to the news article
             
         Returns:
-            str: The generated response_id
+            str: The response_id (new or existing)
         """
         session = self.Session()
         try:
-            # Generate a random response ID
-            response_id = str(uuid.uuid4())
+            # Check if a response already exists for this customer and beneficiary
+            existing_response = session.query(DisasterResponse).filter(
+                DisasterResponse.customer_id == customer_id,
+                DisasterResponse.beneficiary_id == beneficiary_id
+            ).first()
             
-            # Create new response record
-            response = DisasterResponse(
-                response_id=response_id,
-                customer_id=customer_id,
-                beneficiary_id=beneficiary_id,
-                location=location,
-                disaster_type=disaster_type,
-                severity=severity,
-                status=status,
-                is_aid_required=is_aid_required,
-                estimated_affected=estimated_affected,
-                required_aid_amount=required_aid_amount,
-                aid_currency=aid_currency,
-                evacuation_needed=evacuation_needed,
-                disaster_date=disaster_date,
-                timestamp=timestamp,
-                confidence_score=confidence_score,
-                is_valid=is_valid,
-                reasoning=reasoning,
-                validation_reasoning=validation_reasoning,
-                summarized_news=summarized_news,
-                news_link=news_link
-            )
-            session.add(response)
-            logger.info(f"Created new disaster response {response_id}")
-            
-            session.commit()
-            return response_id
+            if existing_response:
+                # Update existing response
+                existing_response.location = location
+                existing_response.disaster_type = disaster_type
+                existing_response.severity = severity
+                existing_response.status = status
+                existing_response.is_aid_required = is_aid_required
+                existing_response.estimated_affected = estimated_affected
+                existing_response.required_aid_amount = required_aid_amount
+                existing_response.aid_currency = aid_currency
+                existing_response.evacuation_needed = evacuation_needed
+                existing_response.disaster_date = disaster_date
+                existing_response.timestamp = timestamp
+                existing_response.confidence_score = confidence_score
+                existing_response.is_valid = is_valid
+                existing_response.reasoning = reasoning
+                existing_response.validation_reasoning = validation_reasoning
+                existing_response.summarized_news = summarized_news
+                
+                logger.info(f"Updated existing disaster response {existing_response.response_id}")
+                session.commit()
+                return existing_response.response_id
+            else:
+                # Create new response record
+                response_id = str(uuid.uuid4())
+                response = DisasterResponse(
+                    response_id=response_id,
+                    customer_id=customer_id,
+                    beneficiary_id=beneficiary_id,
+                    location=location,
+                    disaster_type=disaster_type,
+                    severity=severity,
+                    status=status,
+                    is_aid_required=is_aid_required,
+                    estimated_affected=estimated_affected,
+                    required_aid_amount=required_aid_amount,
+                    aid_currency=aid_currency,
+                    evacuation_needed=evacuation_needed,
+                    disaster_date=disaster_date,
+                    timestamp=timestamp,
+                    confidence_score=confidence_score,
+                    is_valid=is_valid,
+                    reasoning=reasoning,
+                    validation_reasoning=validation_reasoning,
+                    summarized_news=summarized_news
+                )
+                session.add(response)
+                logger.info(f"Created new disaster response {response_id}")
+                session.commit()
+                return response_id
             
         except Exception as e:
             session.rollback()
-            logger.error(f"Error inserting/updating disaster response: {str(e)}")
+            logger.error(f"Error upserting disaster response: {str(e)}")
             raise
         finally:
             session.close()
+
+    def upsert_news_link(self, customer_id: str, beneficiary_id: str, news_link: str) -> None:
+        """
+        Insert a news link into the database.
+        If a customer and beneficary doesn't exist, it will be created.
+        """
+        session = self.Session()
+        try:
+            # Check if a response already exists for this customer and beneficiary
+            existing_response = session.query(DisasterResponse).filter(
+                DisasterResponse.customer_id == customer_id,
+                DisasterResponse.beneficiary_id == beneficiary_id
+            ).first()
+
+            if existing_response:
+                existing_response.news_link = news_link
+                session.commit()
+                logger.info(f"Updated news link for disaster response {existing_response.response_id}")
+            else:
+                logger.warning(f"No disaster response found for customer {customer_id} and beneficiary {beneficiary_id}")
+        except Exception as e:
+            logger.error(f"Error inserting news link: {str(e)}")
+            raise
+        finally:
+            session.close()
+
+
 
 # Module-level database instance
 _db = None

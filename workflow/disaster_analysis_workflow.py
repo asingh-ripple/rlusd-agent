@@ -53,7 +53,7 @@ class DisasterMonitorWorkflow:
     async def run(self, query: DisasterQuery) -> dict:
         """Main workflow execution."""
         try:
-            logger.info(f"Starting workflow for customer {query.customer_id}")
+            logger.info(f"Starting workflow for customer {query.customer_id} and beneficiary {query.beneficiary_id}")
             
             # Execute the disaster analysis activity with retry policy
             analysis_result = await execute_activity(
@@ -125,7 +125,7 @@ async def analyze_disaster_activity(query: DisasterQuery) -> dict:
         disaster_activity_logger.info("Successfully created LangGraph workflow")
         
         # Create the full query with location context
-        full_query = f"Customer ID: {query.customer_id}\nLocation: {query.location}\nQuery: {query.query}"
+        full_query = f"Customer ID: {query.customer_id}\nBeneficiary ID: {query.beneficiary_id}\nLocation: {query.location}\nQuery: {query.query}"
         disaster_activity_logger.info(f"Processing query: {full_query}")
         
         # Run the LangGraph workflow
@@ -160,7 +160,6 @@ async def analyze_disaster_activity(query: DisasterQuery) -> dict:
                 "isValid": final_response.is_valid.lower() == "true",
                 "validationReasoning": final_response.validation_reasoning,
                 "summarizedNews": final_response.summarized_news,
-                "newsLink": final_response.news_link  # Add news link to response
             }
             
             # Log the response details using pretty-printed JSON
@@ -238,7 +237,7 @@ async def insert_disaster_analysis(query: DisasterQuery, analysis_result: dict) 
         db = get_db()
         
         # Insert/update the disaster response
-        response_id = db.insert_disaster_response(
+        response_id = db.upsert_disaster_response(
             customer_id=query.customer_id,
             beneficiary_id=query.beneficiary_id,
             location=analysis_result["location"],
@@ -256,7 +255,7 @@ async def insert_disaster_analysis(query: DisasterQuery, analysis_result: dict) 
             is_valid=analysis_result["isValid"],
             reasoning=analysis_result["reasoning"],
             validation_reasoning=analysis_result["validationReasoning"],
-            summarized_news=analysis_result.get("summarizedNews")  # Get news summary if available
+            summarized_news=analysis_result.get("summarizedNews"),
         )
         
         disaster_activity_logger.info(f"Successfully inserted/updated disaster response {response_id}")

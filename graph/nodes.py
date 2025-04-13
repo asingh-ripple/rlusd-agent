@@ -43,9 +43,10 @@ def call_model(state):
         state["messages"].insert(0, system_message)
     
     logger.info("ACTION: Starting model analysis...")
+    print("STATE: ", state)
     response = model_with_tools.invoke(state["messages"])
-     
-    # Log any tool calls made by the model
+    print("RESPONSE FROM CALL MODEL: ", response)
+
     if hasattr(response, 'tool_calls') and response.tool_calls:
         for tool_call in response.tool_calls:
             if isinstance(tool_call, dict):

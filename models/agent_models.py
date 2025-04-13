@@ -1,3 +1,4 @@
+from typing import Dict, List
 from pydantic import BaseModel, Field
 from langgraph.graph import MessagesState
 from datetime import datetime
@@ -22,7 +23,6 @@ class DisasterResponse(BaseModel):
     is_valid: str = Field(default="false", description="Whether the final response is valid ('true' or 'false')")
     validation_reasoning: str = Field(description="Detailed explanation of why the response is considered valid or invalid")
     summarized_news: str = Field(description="Summary of latest news about the disaster")
-    news_link: str = Field(description="Link to the news article")
     def __str__(self) -> str:
         return (
             f"Reasoning: {self.reasoning}\n"
@@ -40,12 +40,12 @@ class DisasterResponse(BaseModel):
             f"Valid: {self.is_valid}\n"
             f"Validation Reasoning: {self.validation_reasoning}\n"
             f"Summarized News: {self.summarized_news}\n"
-            f"News Link: {self.news_link}\n"
         )
     
 class DisasterQuery(BaseModel):
     """Query for disaster monitoring."""
     customer_id: str = Field(description="Customer ID")
+    beneficiary_id: str = Field(description="Beneficiary ID")
     location: str = Field(description="Location")
     query: str = Field(description="Query")
     query_date: str | None = Field(default=None, description="When the query was made (in this format: 'yyyy-mm-dd')")

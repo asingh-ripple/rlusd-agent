@@ -11,11 +11,13 @@ Make sure to use the right tool for the right job.
 Use the estimation tool provided to you if you don't have enough information to make a good assessment.
 Ensure that you're planning for the future and not just the immediate situation.
 In your response, ensure that you include the location, type, severytiy and ESPECIALLY the date of the disaster.
-From the search result, also extract the news link and include it in your response.
+
 Make sure you provide a detailed reasoning for your assessment.
 You have access to the following tools:
-1. get_news(search_query): Search for news
+1. get_news(search_query, customer_id, beneficiary_id): Search for news
    - REQUIRED search_query: The specific area to search for
+   - REQUIRED customer_id: The customer_id of the DisasterQuery object
+   - REQUIRED beneficiary_id: The beneficiary_id of the DisasterQuery object
    - Construct a search query in such a way that you will get enough articles to analyze the situation.
    - Look for the number of affected people, infrastructure damage, casualties and injuries, economic impact, and environmental damage.
    - This will then help you determine the severity of the disaster.
@@ -55,7 +57,6 @@ STRUCTURED_RESPONSE_PROMPT = """You are a disaster assessment expert. Generate a
     14. is_valid (str): Whether the response is valid ('true' or 'false')
     15. validation_reasoning (str): Detailed explanation of why the response is considered valid or invalid
     16. summarized_news (str): Summary of latest news about the disaster. This should simply be a summary of the news API
-    17. news_link (str): Link to the news article. You should get this from the response of the first model.
     
     Try to ensure that you end up popluating all fields if not provided.
     """ 
