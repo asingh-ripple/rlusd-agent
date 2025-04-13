@@ -3,6 +3,7 @@ from pydantic import BaseModel
 import uvicorn
 from workflow.temporal_client import execute_disaster_workflow
 from blockchain.traces import get_all_consolidated_edges
+from blockchain.transaction import execute_payment
 from typing import List, Optional
 from db.database import get_db, Customer, CustomerType, Donations, DonationStatus
 from enum import Enum
@@ -303,12 +304,7 @@ async def get_cause_details(cause_id: str):
     """Get all customer details with a left join between customers and customer_details tables."""
     try:
         cause = db.get_cause(cause_id)
-        customer = db.get_customer(cause.customer_id)
-        donations = db.get_donation_by_cause_id(cause_id)
-        total_donations = sum(donation.amount for donation in donations)
-        num_donations = len(donations)
-        print(f"Total donations: {total_donations}")
-        print(f"Number of donations: {num_donations}")
+        cause_with_donations = db.get_cause_with_donations(cause_id)
         
         # Convert to response format
         cause_dict = {
@@ -319,8 +315,8 @@ async def get_cause_details(cause_id: str):
             "imageUrl": cause.imageUrl,
             "category": cause.category,
             "customer_id": cause.customer_id,
-            "donations": num_donations,
-            "raised": total_donations
+            "donations": cause_with_donations.donation_count if cause_with_donations.donation_count else 0,
+            "raised": cause_with_donations.total_donation_amount if cause_with_donations.total_donation_amount else 0
         }
         
         return CauseDetailsResponse(**cause_dict)
@@ -333,18 +329,11 @@ async def get_cause_details(cause_id: str):
 async def get_cause_details(limit: Optional[int] = 10):
     """Get all customer details with a left join between customers and customer_details tables."""
     try:
-        if limit:
-            causes = db.limited_causes(limit)
-        else:
-            causes = db.get_all_causes()
+        causes = db.get_all_causes_with_donations()
         
         # Convert to response format
         cause_dict = []
-        print(f"Found {len(causes)} causes")
         for cause in causes:
-            donations = db.get_donation_by_cause_id(cause.cause_id)
-            total_donations = sum(donation.amount for donation in donations)
-            num_donations = len(donations)
             cause_dict.append({
                 "cause_id": cause.cause_id,
                 "name": cause.name,
@@ -353,8 +342,8 @@ async def get_cause_details(limit: Optional[int] = 10):
                 "imageUrl": cause.imageUrl,
                 "category": cause.category,
                 "customer_id": cause.customer_id,
-                "donations": num_donations,
-                "raised": total_donations
+                "donations": cause.donation_count if cause.donation_count else 0,
+                "raised": cause.total_donation_amount if cause.total_donation_amount else 0
             })
         
         return cause_dict

@@ -6,6 +6,7 @@ Script to seed the database with test data.
 import os
 import sys
 from datetime import datetime
+from sqlalchemy import create_engine, text
 
 # Add the parent directory to the path to import the database module
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -13,75 +14,67 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from db.database import (
     init_db, get_db, Customer, CustomerType, 
     Transaction, TransactionType, TransactionStatus,
-    DonationStatus, Cause, Donations, Disbursements, DisbursementStatus
+    DonationStatus, Cause, Donations, DisbursementStatus
 )
 from db.config import SQLITE_URL
 from config.logger_config import setup_logger
-from db.seed_causes import seed_causes
+from db.seed_causes import seed_causes, seed_customers
 
 logger = setup_logger(__name__)
 
 # Test data
-TEST_CUSTOMERS = [
-    {
-        "customer_id": "sender-1",
-        "email_address": "sender1@example.com",
-        "wallet_address": "rQBsLAh7nQLdRJTJnCapCsbng5Eu8oTUHW",
-        "wallet_seed": "sEdSCgE57Qvs6NHJDc6aRkXPz5A1AE",
-        "customer_type": CustomerType.SENDER
-    },
-    {
-        "customer_id": "sender-2",
-        "email_address": "sender2@example.com",
-        "wallet_address": "rMQhytkyM4dwSJkmoAY3qxThRX2M2Py8wc",
-        "wallet_seed": "sEd56SLmRgdRENTjdEwU3AJezmGSD9",
-        "customer_type": CustomerType.SENDER
-    },
-    {
-        "customer_id": "receiver-1",
-        "email_address": "receiver1@example.com",
-        "wallet_address": "rQhWct2fv4Vc4KRjRgMrxa8xPN9Zx9iLKV",
-        "wallet_seed": "sEdVTRwb6r8ufPuUQ4fbUDhfLZxcZC",
-        "customer_type": CustomerType.RECEIVER
-    },
-    {
-        "customer_id": "receiver-2",
-        "email_address": "receiver2@example.com",
-        "wallet_address": "rMQhytkyM4dwSJkmoAY3qxThRX2M2Py8wc",
-        "wallet_seed": "sEdSzyFa6XP3RwYbNTrTFneMBuLxWy",
-        "customer_type": CustomerType.RECEIVER
-    }
-]
-
-# Test relationships
-TEST_RELATIONSHIPS = [
-    {"sender_id": "sender-1", "receiver_id": "receiver-1"},
-    {"sender_id": "sender-1", "receiver_id": "receiver-2"},
-    {"sender_id": "sender-2", "receiver_id": "receiver-1"},
-    {"sender_id": "sender-2", "receiver_id": "receiver-2"}
-]
+# TEST_CUSTOMERS = [
+#     {
+#         "customer_id": "sender-1",
+#         "email_address": "sender1@example.com",
+#         "wallet_address": "rQBsLAh7nQLdRJTJnCapCsbng5Eu8oTUHW",
+#         "wallet_seed": "sEdSCgE57Qvs6NHJDc6aRkXPz5A1AE",
+#         "customer_type": CustomerType.SENDER
+#     },
+#     {
+#         "customer_id": "sender-2",
+#         "email_address": "sender2@example.com",
+#         "wallet_address": "rMQhytkyM4dwSJkmoAY3qxThRX2M2Py8wc",
+#         "wallet_seed": "sEd56SLmRgdRENTjdEwU3AJezmGSD9",
+#         "customer_type": CustomerType.SENDER
+#     },
+#     {
+#         "customer_id": "receiver-1",
+#         "email_address": "receiver1@example.com",
+#         "wallet_address": "rQhWct2fv4Vc4KRjRgMrxa8xPN9Zx9iLKV",
+#         "wallet_seed": "sEdVTRwb6r8ufPuUQ4fbUDhfLZxcZC",
+#         "customer_type": CustomerType.RECEIVER
+#     },
+#     {
+#         "customer_id": "receiver-2",
+#         "email_address": "receiver2@example.com",
+#         "wallet_address": "rMQhytkyM4dwSJkmoAY3qxThRX2M2Py8wc",
+#         "wallet_seed": "sEdSzyFa6XP3RwYbNTrTFneMBuLxWy",
+#         "customer_type": CustomerType.RECEIVER
+#     }
+# ]
 
 # Test transactions
-TEST_TRANSACTIONS = [
-    {
-        "transaction_hash": "tx1",
-        "sender_id": "sender-1",
-        "receiver_id": "receiver-1",
-        "amount": 1000.0,
-        "currency": "RLUSD",
-        "transaction_type": TransactionType.PAYMENT,
-        "status": TransactionStatus.SUCCESS
-    },
-    {
-        "transaction_hash": "tx2",
-        "sender_id": "sender-2",
-        "receiver_id": "receiver-2",
-        "amount": 2000.0,
-        "currency": "RLUSD",
-        "transaction_type": TransactionType.PAYMENT,
-        "status": TransactionStatus.SUCCESS
-    }
-]
+# TEST_TRANSACTIONS = [
+#     {
+#         "transaction_hash": "tx1",
+#         "sender_id": "sender-1",
+#         "receiver_id": "receiver-1",
+#         "amount": 1000.0,
+#         "currency": "RLUSD",
+#         "transaction_type": TransactionType.PAYMENT,
+#         "status": TransactionStatus.SUCCESS
+#     },
+#     {
+#         "transaction_hash": "tx2",
+#         "sender_id": "sender-2",
+#         "receiver_id": "receiver-2",
+#         "amount": 2000.0,
+#         "currency": "RLUSD",
+#         "transaction_type": TransactionType.PAYMENT,
+#         "status": TransactionStatus.SUCCESS
+#     }
+# ]
 
 # Test donations
 TEST_DONATIONS = [
@@ -122,14 +115,14 @@ def clear_tables(db):
     session = db.Session()
     try:
         print("Clearing existing data...")
-        # session.execute("DELETE FROM disbursements_donations")
-        # session.execute("DELETE FROM disbursements")
-        # session.execute("DELETE FROM donations")
-        # session.execute("DELETE FROM causes")
-        # session.execute("DELETE FROM checks")
-        # session.execute("DELETE FROM transactions")
-        # session.execute("DELETE FROM customer_relationships")
-        # session.execute("DELETE FROM customers")
+        # session.execute(text("DROP TABLE IF EXISTS disbursements_donations"))
+        # session.execute(text("DROP TABLE IF EXISTS disbursements"))
+        # session.execute(text("DROP TABLE IF EXISTS donations"))
+        # session.execute(text("DROP TABLE IF EXISTS causes"))
+        # session.execute(text("DROP TABLE IF EXISTS checks"))
+        # session.execute(text("DROP TABLE IF EXISTS transactions"))
+        # session.execute(text("DROP TABLE IF EXISTS customer_relationships"))
+        # session.execute(text("DROP TABLE IF EXISTS customers"))
         session.commit()
         print("Database cleared successfully")
     except Exception as e:
@@ -151,56 +144,45 @@ def seed_database():
     clear_tables(db)
     
     # Add customers
-    print("\nAdding customers...")
-    for customer_data in TEST_CUSTOMERS:
-        try:
-            print(f"\nAdding customer: {customer_data['customer_id']}")
-            db.add_customer(
-                customer_id=customer_data['customer_id'],
-                wallet_seed=customer_data['wallet_seed'],
-                customer_type=customer_data['customer_type'],
-                wallet_address=customer_data['wallet_address'],
-                email_address=customer_data['email_address']
-            )
-            print(f"✓ Successfully added {customer_data['customer_id']}")
-        except Exception as e:
-            print(f"Error adding {customer_data['customer_id']}: {str(e)}")
-    
-    # Add relationships
-    print("\nAdding customer relationships...")
-    for relationship in TEST_RELATIONSHIPS:
-        try:
-            print(f"\nAdding relationship: {relationship['sender_id']} -> {relationship['receiver_id']}")
-            db.add_relationship(
-                sender_id=relationship['sender_id'],
-                receiver_id=relationship['receiver_id']
-            )
-            print(f"✓ Successfully added relationship")
-        except Exception as e:
-            print(f"Error adding relationship: {str(e)}")
+    # print("\nAdding customers...")
+    # for customer_data in TEST_CUSTOMERS:
+    #     try:
+    #         print(f"\nAdding customer: {customer_data['customer_id']}")
+    #         db.add_customer(
+    #             customer_id=customer_data['customer_id'],
+    #             wallet_seed=customer_data['wallet_seed'],
+    #             customer_type=customer_data['customer_type'],
+    #             wallet_address=customer_data['wallet_address'],
+    #             email_address=customer_data['email_address']
+    #         )
+    #         print(f"✓ Successfully added {customer_data['customer_id']}")
+    #     except Exception as e:
+    #         print(f"Error adding {customer_data['customer_id']}: {str(e)}")
     
     # Add transactions
-    print("\nAdding transactions...")
-    for transaction in TEST_TRANSACTIONS:
-        try:
-            print(f"\nAdding transaction: {transaction['transaction_hash']}")
-            db.insert_transaction(
-                transaction_hash=transaction['transaction_hash'],
-                sender_id=transaction['sender_id'],
-                receiver_id=transaction['receiver_id'],
-                amount=transaction['amount'],
-                currency=transaction['currency'],
-                transaction_type=transaction['transaction_type'],
-                status=transaction['status']
-            )
-            print(f"✓ Successfully added transaction")
-        except Exception as e:
-            print(f"Error adding transaction: {str(e)}")
+    # print("\nAdding transactions...")
+    # for transaction in TEST_TRANSACTIONS:
+    #     try:
+    #         print(f"\nAdding transaction: {transaction['transaction_hash']}")
+    #         db.insert_transaction(
+    #             transaction_hash=transaction['transaction_hash'],
+    #             sender_id=transaction['sender_id'],
+    #             receiver_id=transaction['receiver_id'],
+    #             amount=transaction['amount'],
+    #             currency=transaction['currency'],
+    #             transaction_type=transaction['transaction_type'],
+    #             status=transaction['status']
+    #         )
+    #         print(f"✓ Successfully added transaction")
+    #     except Exception as e:
+    #         print(f"Error adding transaction: {str(e)}")
     
     # Seed causes
     print("\nSeeding causes...")
+    session = db.Session()
     try:
-        seed_causes()
+        seed_causes(session)
+        seed_customers(session)
     except Exception as e:
         print(f"Error seeding causes: {str(e)}")
     

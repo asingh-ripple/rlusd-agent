@@ -19,30 +19,87 @@ from db.database import Base, Cause, Customer, CustomerType
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "disaster_monitor.db")
 DB_CONNECTION_STRING = f"sqlite:///{DB_PATH}"
 
+# {
+#         "customer_id": "benefactor-4",
+#         "customer_name": "Flood Recovery in Louisiana",
+#         "email_address": "sender2@example.com",
+#         "wallet_address": "rMQhytkyM4dwSJkmoAY3qxThRX2M2Py8wc",
+#         "wallet_seed": "sEd56SLmRgdRENTjdEwU3AJezmGSD9",
+#         "customer_type": CustomerType.SENDER
+#     },
+#     {
+#         "customer_id": "benefactor-5",
+#         "customer_name": "Global Relief Fund",
+#         "email_address": "sender1@example.com",
+#         "wallet_address": "rQBsLAh7nQLdRJTJnCapCsbng5Eu8oTUHW",
+#         "wallet_seed": "sEdSCgE57Qvs6NHJDc6aRkXPz5A1AE",
+#         "customer_type": CustomerType.SENDER
+#     },
+#     {
+#         "customer_id": "benefactor-6",
+#         "customer_name": "Flood Recovery in Louisiana",
+#         "email_address": "sender2@example.com",
+#         "wallet_address": "rMQhytkyM4dwSJkmoAY3qxThRX2M2Py8wc",
+#         "wallet_seed": "sEd56SLmRgdRENTjdEwU3AJezmGSD9",
+#         "customer_type": CustomerType.SENDER
+#     },
+
 # Mock customers data
 mock_customers = [
     {
-        "customer_id": "customer-1",
+        "customer_id": "benefactor-1",
         "customer_name": "Global Relief Fund",
-        "wallet_seed": "sEdV58GZ9wgCeK8jNpn4LCw5Ge3r9jqGN",
-        "wallet_address": "rExYJzCiX3U8PnM5SEKpYJCKP5nHqX7Pnh",
         "email_address": "sender1@example.com",
+        "wallet_address": "rQBsLAh7nQLdRJTJnCapCsbng5Eu8oTUHW",
+        "wallet_seed": "sEdTbvYhVumc89LPr6ajiKe13km37h3",
         "customer_type": CustomerType.SENDER
     },
     {
-        "customer_id": "customer-2",
+        "customer_id": "benefactor-2",
         "customer_name": "Flood Recovery in Louisiana",
-        "wallet_seed": "sEdVr8KtMdyMKxGGC7MQgS5xQfzWSC2VS",
-        "wallet_address": "r9LqwNgJMSKG8kHgCKsCHiYUGoPgKsZjcY",
         "email_address": "sender2@example.com",
+        "wallet_address": "rMQhytkyM4dwSJkmoAY3qxThRX2M2Py8wc",
+        "wallet_seed": "sEd7Sok4VSed8Sw5m2z9LY2YbKLT5PG",
         "customer_type": CustomerType.SENDER
     },
     {
-        "customer_id": "customer-3",
-        "customer_name": "Hurricane Harvey Relief",
-        "wallet_seed": "sEdVG1xwsB4pMU2w6M9DF9K4qA6Pakvji",
-        "wallet_address": "rMVQiVRUXEGEiQrHHi2SyAKqV6Xdmvds8N",
+        "customer_id": "benefactor-3",
+        "customer_name": "Global Relief Fund",
+        "email_address": "sender1@example.com",
+        "wallet_address": "rEK9ZdnAxMX3eqvF8HKJdBhftcepK3by55",
+        "wallet_seed": "sEdTy9zRMrgjqs7d14944UCdFxXdGix",
+        "customer_type": CustomerType.SENDER
+    },
+    {
+        "customer_id": "charity-1",
+        "customer_name": "Relief Riders Kenya",
         "email_address": "receiver1@example.com",
+        "wallet_address": "rJcYDNsHc5zAEbnPMj4y27GdbL6k2XvtuX",
+        "wallet_seed": "sEdTeac7Bi6x6t6c3vz74Ux7s4MPcqe",
+        "customer_type": CustomerType.RECEIVER
+    },
+    {
+        "customer_id": "charity-2",
+        "customer_name": "Clean Water for Nigeria",
+        "email_address": "receiver2@example.com",
+        "wallet_address": "rU1639GkScbLsUGbPDu7D1YHdMmM8E8NfL",
+        "wallet_seed": "sEd7QHq54A53HVB286ApCjh9EeakzbH",
+        "customer_type": CustomerType.RECEIVER
+    },
+    {
+        "customer_id": "charity-3",
+        "customer_name": "Hurrican in the Philippines Relief Team",
+        "email_address": "receiver1@example.com",
+        "wallet_address": "rp7mh1AJKDfJxJMx7DL3urTuW9bjRTE5Cm",
+        "wallet_seed": "sEdScpmaSs5zM3YWjKTHPdsBTY6ZK3L",
+        "customer_type": CustomerType.RECEIVER
+    },
+    {
+        "customer_id": "charity-4",
+        "customer_name": "Mobile Clinics For Crisis Zones With HealthBridge",
+        "email_address": "receiver2@example.com",
+        "wallet_address": "rPbnbLavLZLhXZhgoqVFCkTuG3YFcGS3Jh",
+        "wallet_seed": "sEdVJRosHqNbeGm7UDKH8zCiQ8fZ2so",
         "customer_type": CustomerType.RECEIVER
     }
 ]
@@ -52,7 +109,7 @@ mock_causes = [
         "id": "2",
         "title": "Flood Recovery in Louisiana",
         "description": "Help families rebuild after the devastating floods in Louisiana.",
-        "goal": 350000,
+        "goal": 50000,
         "imageUrl": "images/flood-recovery.jpg",
         "category": "Natural Disasters",
         "customer_id": "customer-1"
@@ -70,7 +127,7 @@ mock_causes = [
         "id": "8",
         "title": "Mobile Clinics For Crisis Zones With HealthBridge",
         "description": "HealthBridge deploys mobile clinics in underserved areas affected by conflicts and pandemics. Every donation fuels life-saving diagnoses and care in real time.",
-        "goal": 200000,
+        "goal": 20000,
         "imageUrl": "images/mobile-clinics.jpg",
         "category": "Health Emergencies",
         "customer_id": "customer-2"
@@ -79,7 +136,7 @@ mock_causes = [
         "id": "9",
         "title": "Emergency Aid in Gaza with Humanity Frontline",
         "description": "Providing food, medical aid, and psychological support for families affected by conflict in Gaza. Your donation goes directly to vetted local workers on the ground.",
-        "goal": 60000,
+        "goal": 6000,
         "imageUrl": "images/emergency-aid.jpg",
         "category": "Conflict Zone",
         "customer_id": "customer-2"
@@ -88,7 +145,7 @@ mock_causes = [
         "id": "10",
         "title": "Combating Cholera with CleanMedic Haiti",
         "description": "Fighting the cholera outbreak with emergency IV fluids, antibiotics, and bed treatment. Your contribution supports local nurses and medics on the frontlines.",
-        "goal": 220000,
+        "goal": 1000,
         "imageUrl": "images/combating.jpg",
         "category": "Health Emergencies",
         "customer_id": "customer-2"

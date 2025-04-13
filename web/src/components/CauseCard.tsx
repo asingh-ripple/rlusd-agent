@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatCurrency, calculatePercentage } from '../utils/helpers';
-// import './CauseCard.css';
+import './CauseCard.css';
 
 // Import the Cause interface
 interface Cause {
-  id: string;
+  cause_id: string;
   name: string;
   description: string;
   goal: number;
@@ -97,8 +97,8 @@ const CauseCard: React.FC<CauseCardProps> = ({ cause, expanded = false }) => {
               <span className="text-base font-bold text-gray-900">{cause.donations}</span>
               <span className="text-xs text-gray-500">Donations</span>
             </div>
-            <a href={`/causes/${cause.id}`} className="bg-indigo-600 text-white text-xs font-semibold py-2 px-3 rounded uppercase tracking-wide hover:bg-indigo-700 transition-colors">
-              VIEW DETAILS
+            <a href={`/causes/${cause.cause_id}`} className="bg-indigo-600 text-white text-xs font-semibold py-2 px-3 rounded uppercase tracking-wide hover:bg-indigo-700 transition-colors">
+              View Details
             </a>
           </div>
         </div>

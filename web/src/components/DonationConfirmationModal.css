@@ -56,7 +56,7 @@
   color: #222;
 }
 
-.feel-good-button {
+.confirmation-button {
   background-color: #46c55a;
   color: white;
   border: none;
@@ -70,11 +70,11 @@
   letter-spacing: 1px;
 }
 
-.feel-good-button:hover {
+.confirmation-button:hover {
   background-color: #3cb550;
 }
 
-.feel-good-button:focus {
+.confirmation-button:focus {
   outline: none;
   box-shadow: 0 0 0 3px rgba(70, 197, 90, 0.4);
 }
@@ -94,7 +94,7 @@
     margin-bottom: 40px;
   }
   
-  .feel-good-button {
+  .confirmation-button {
     width: 100%;
     padding: 14px 20px;
   }

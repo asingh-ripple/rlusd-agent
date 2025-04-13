@@ -24,26 +24,6 @@ const Footer: React.FC = () => {
             </div>
             
             <div className="footer-links-column">
-              <h3>Causes</h3>
-              <ul>
-                <li><Link to="/causes?category=natural-disasters">Natural Disasters</Link></li>
-                <li><Link to="/causes?category=conflict-zone">Conflict Zone</Link></li>
-                <li><Link to="/causes?category=health-emergencies">Health Emergencies</Link></li>
-                <li><Link to="/causes?category=food-water">Food & Water Crisis</Link></li>
-              </ul>
-            </div>
-            
-            <div className="footer-links-column">
-              <h3>Resources</h3>
-              <ul>
-                <li><Link to="/blog">Blog</Link></li>
-                <li><Link to="/resources/faq">FAQ</Link></li>
-                <li><Link to="/resources/how-it-works">How it Works</Link></li>
-                <li><Link to="/resources/impact">Impact Stories</Link></li>
-              </ul>
-            </div>
-            
-            <div className="footer-links-column">
               <h3>Connect</h3>
               <ul>
                 <li><Link to="/contact">Contact Us</Link></li>

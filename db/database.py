@@ -11,6 +11,7 @@ from sqlalchemy.engine import Engine
 from config.logger_config import setup_logger
 from datetime import datetime
 import uuid
+from sqlalchemy import select, func
 
 logger = setup_logger(__name__)
 
@@ -55,32 +56,6 @@ class Customer(Base):
     customer_type = Column(SQLEnum(CustomerType))
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relationships
-    # sent_transactions = relationship("CustomerRelationship", 
-    #                                foreign_keys="CustomerRelationship.sender_id",
-    #                                back_populates="sender",
-    #                                cascade="all, delete-orphan")
-    # received_transactions = relationship("CustomerRelationship",
-    #                                    foreign_keys="CustomerRelationship.receiver_id",
-    #                                    back_populates="receiver",
-    #                                    cascade="all, delete-orphan")
-    # transactions_sent = relationship("Transaction", 
-    #                                foreign_keys="Transaction.sender_id",
-    #                                back_populates="sender",
-    #                                cascade="all, delete-orphan")
-    # transactions_received = relationship("Transaction",
-    #                                    foreign_keys="Transaction.receiver_id",
-    #                                    back_populates="receiver",
-    #                                    cascade="all, delete-orphan")
-    # checks_sent = relationship("Check",
-    #                          foreign_keys="Check.sender_id",
-    #                          back_populates="sender",
-    #                          cascade="all, delete-orphan")
-    # checks_received = relationship("Check",
-    #                              foreign_keys="Check.receiver_id",
-    #                              back_populates="receiver",
-    #                              cascade="all, delete-orphan")
 
 class DonationStatus(str, Enum):
     """Enum for donation status."""
@@ -118,20 +93,6 @@ class DisbursementsDonations(Base):
     donor_id = Column(String, nullable=False)
     amount = Column(Float, nullable=False)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    # Relationships
-    # disbursement = relationship("Disbursement", foreign_keys=[disbursement_id], back_populates="donations")
-    # donation = relationship("Donation", foreign_keys=[donation_id], back_populates="disbursements")
-
-class CustomerRelationship(Base):
-    """Model for tracking relationships between customers."""
-    __tablename__ = "customer_relationships"
-
-    sender_id = Column(String, ForeignKey("customers.customer_id", ondelete="CASCADE"), primary_key=True)
-    receiver_id = Column(String, ForeignKey("customers.customer_id", ondelete="CASCADE"), primary_key=True)
-    
-    # Relationships
-    # sender = relationship("Customer", foreign_keys=[sender_id], back_populates="sent_transactions")
-    # receiver = relationship("Customer", foreign_keys=[receiver_id], back_populates="received_transactions")
 
 class Transaction(Base):
     """Model for tracking transactions between customers."""
@@ -145,10 +106,6 @@ class Transaction(Base):
     transaction_type = Column(SQLEnum(TransactionType), nullable=False)
     status = Column(SQLEnum(TransactionStatus), nullable=False)
     insertion_date = Column(DateTime, nullable=False, default=datetime.utcnow)
-    
-    # Relationships
-#    sender = relationship("Customer", foreign_keys=[sender_id], back_populates="transactions_sent")
-#    receiver = relationship("Customer", foreign_keys=[receiver_id], back_populates="transactions_received")
 
     def insert_transaction(self, 
                        transaction_hash: str,
@@ -191,40 +148,30 @@ class Transaction(Base):
         finally:
             session.close()
 
-class Check(Base):
-    """Model for tracking checks between customers."""
-    __tablename__ = "checks"
+# class Check(Base):
+#     """Model for tracking checks between customers."""
+#     __tablename__ = "checks"
 
-    check_id = Column(String, primary_key=True)
-    transaction_hash = Column(String, nullable=False, unique=True)
-    sender_id = Column(String, ForeignKey("customers.customer_id", ondelete="CASCADE"), nullable=False)
-    receiver_id = Column(String, ForeignKey("customers.customer_id", ondelete="CASCADE"), nullable=False)
-    amount = Column(Numeric(20, 6), nullable=False)  # 20 digits total, 6 decimal places
-    currency = Column(String, nullable=False)
-    expiration_date = Column(DateTime, nullable=False)
-    insertion_date = Column(DateTime, nullable=False, default=datetime.utcnow)
-    check_type = Column(SQLEnum(CheckType), nullable=False, default=CheckType.CHECK_CREATE)
-    
-    # Relationships
-#    sender = relationship("Customer", foreign_keys=[sender_id], back_populates="checks_sent")
-#    receiver = relationship("Customer", foreign_keys=[receiver_id], back_populates="checks_received")
+#     check_id = Column(String, primary_key=True)
+#     transaction_hash = Column(String, nullable=False, unique=True)
+#     sender_id = Column(String, ForeignKey("customers.customer_id", ondelete="CASCADE"), nullable=False)
+#     receiver_id = Column(String, ForeignKey("customers.customer_id", ondelete="CASCADE"), nullable=False)
+#     amount = Column(Numeric(20, 6), nullable=False)  # 20 digits total, 6 decimal places
+#     currency = Column(String, nullable=False)
+#     expiration_date = Column(DateTime, nullable=False)
+#     insertion_date = Column(DateTime, nullable=False, default=datetime.utcnow)
+#     check_type = Column(SQLEnum(CheckType), nullable=False, default=CheckType.CHECK_CREATE)
 
 class Cause(Base):
     """Model for storing causes."""
     __tablename__ = "causes"
-    customer_id = Column(String(50), ForeignKey("customers.customer_id", ondelete="CASCADE"), nullable=False)
+    customer_id = Column(String)
     cause_id = Column(String(50), primary_key=True)
     name = Column(String(255), nullable=False)
     description = Column(String, nullable=False)
     imageUrl = Column(String, nullable=False)
     category = Column(String, nullable=False)
     goal = Column(Numeric(20, 6), nullable=False)  # 20 digits total, 6 decimal places
-    
-    # Relationships (without customer_id foreign key for now)
-    # customer = relationship("Customer", back_populates="details")
-#    donations_list = relationship("Donations", back_populates="cause")
-#    disbursements_list = relationship("Disbursements", back_populates="cause")
-
     def __repr__(self):
         return f"<Cause(cause_id={self.cause_id}, name={self.name}, description={self.description}, imageUrl={self.imageUrl}, category={self.category})>"
 
@@ -293,6 +240,7 @@ class Database:
             with self.Session() as session:
                 customer = session.query(Customer).filter(Customer.customer_id == customer_id).first()
                 if customer:
+                    print(f"Customer: {customer.wallet_seed}")
                     logger.info(f"Retrieved customer {customer_id} with wallet_address {customer.wallet_address}")
                 else:
                     logger.warning(f"Customer {customer_id} not found")
@@ -401,23 +349,23 @@ class Database:
             session.close()
     
 
-    def get_customer_checks(self, customer_id: str) -> List[Check]:
-        """
-        Get all checks for a customer (both sent and received).
+    # def get_customer_checks(self, customer_id: str) -> List[Check]:
+    #     """
+    #     Get all checks for a customer (both sent and received).
         
-        Args:
-            customer_id: ID of the customer
+    #     Args:
+    #         customer_id: ID of the customer
             
-        Returns:
-            List of checks
-        """
-        session = self.Session()
-        try:
-            sent = session.query(Check).filter_by(sender_id=customer_id).all()
-            received = session.query(Check).filter_by(receiver_id=customer_id).all()
-            return sent + received
-        finally:
-            session.close()
+    #     Returns:
+    #         List of checks
+    #     """
+    #     session = self.Session()
+    #     try:
+    #         sent = session.query(Check).filter_by(sender_id=customer_id).all()
+    #         received = session.query(Check).filter_by(receiver_id=customer_id).all()
+    #         return sent + received
+    #     finally:
+    #         session.close()
 
     def update_check_cash(self, check_id: str, new_transaction_hash: str) -> None:
         """
@@ -491,21 +439,21 @@ class Database:
         finally:
             session.close()
 
-    def get_check(self, check_id: str) -> Optional[Check]:
-        """
-        Retrieve a check by its ID.
+    # def get_check(self, check_id: str) -> Optional[Check]:
+    #     """
+    #     Retrieve a check by its ID.
         
-        Args:
-            check_id: ID of the check to look up
+    #     Args:
+    #         check_id: ID of the check to look up
             
-        Returns:
-            Check object if found, None otherwise
-        """
-        session = self.Session()
-        try:
-            return session.query(Check).filter_by(check_id=check_id).first()
-        finally:
-            session.close()
+    #     Returns:
+    #         Check object if found, None otherwise
+    #     """
+    #     session = self.Session()
+    #     try:
+    #         return session.query(Check).filter_by(check_id=check_id).first()
+    #     finally:
+    #         session.close()
 
     def get_all_customers(self) -> List[Customer]:
         """
@@ -542,6 +490,7 @@ class Database:
         Get the seed for a customer.
         """
         customer = self.get_customer(customer_id)
+        print(f"Customer: {customer}")
         return customer.wallet_seed
     
     def insert_cause(self, cause_id: str, name: str, description: str, imageUrl: str, category: str, goal: float, customer_id: str) -> None:
@@ -747,6 +696,69 @@ class Database:
         finally:
             session.close()
 
+    def get_all_causes_with_donations(self) -> List:
+        """
+        Get all causes with their donation statistics.
+        
+        Returns:
+            List of CauseWithDonations objects
+        """
+        session = self.Session()
+        stmt = select(
+            Cause.customer_id,
+            Cause.cause_id,
+            Cause.name,
+            Cause.description,
+            Cause.imageUrl,
+            Cause.category,
+            Cause.goal,
+            func.sum(Donations.amount).label('total_donation_amount'),
+            func.count(Donations.donation_id).label('donation_count')
+        ).select_from(
+            Cause.__table__.outerjoin(
+                Donations.__table__,
+                Cause.cause_id == Donations.cause_id
+            )
+        ).group_by(Cause.cause_id)
+        causes = session.execute(stmt).fetchall()
+        try:
+            return causes
+        finally:
+            session.close()
+    
+    def get_cause_with_donations(self, cause_id: str) -> Optional:
+        """
+        Get a specific cause with its donation statistics.
+        
+        Args:
+            cause_id: ID of the cause
+            
+        Returns:
+            CauseWithDonations object if found, None otherwise
+        """
+        session = self.Session()
+        stmt = select(
+            Cause.customer_id,
+            Cause.cause_id,
+            Cause.name,
+            Cause.description,
+            Cause.imageUrl,
+            Cause.category,
+            Cause.goal,
+            func.sum(Donations.amount).label('total_donation_amount'),
+            func.count(Donations.donation_id).label('donation_count')
+        ).select_from(
+            Cause.__table__.outerjoin(
+                Donations.__table__,
+                Cause.cause_id == Donations.cause_id
+            )
+        ).group_by(Cause.cause_id).where(Cause.cause_id == cause_id)
+        try:
+            cause = session.execute(stmt).fetchone()
+            print(f"Cause: {cause}")
+            return cause
+        finally:
+            session.close()
 # Module-level database instance
 _db = None
 

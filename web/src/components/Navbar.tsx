@@ -13,8 +13,6 @@ const Navbar: React.FC = () => {
         <div className="navbar-links">
           <Link to="/" className="nav-link">Home</Link>
           <Link to="/causes" className="nav-link">Causes</Link>
-          <Link to="/about" className="nav-link">About</Link>
-          <Link to="/contact" className="nav-link">Contact</Link>
         </div>
       </div>
     </nav>

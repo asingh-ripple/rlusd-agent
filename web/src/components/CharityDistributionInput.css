@@ -1,0 +1,93 @@
+.charity-distribution-input {
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+}
+
+.charity-name {
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin-bottom: 15px;
+  color: #111827;
+}
+
+.input-fields {
+  display: flex;
+  align-items: flex-end;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.amount-field {
+  flex: 1;
+}
+
+.percentage-field {
+  width: 80px;
+}
+
+.input-label {
+  display: block;
+  font-size: 0.875rem;
+  margin-bottom: 5px;
+  color: #4b5563;
+  font-weight: 500;
+}
+
+.input-wrapper {
+  display: flex;
+  align-items: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  background-color: #f9fafb;
+  overflow: hidden;
+  position: relative;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input-wrapper:focus-within {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+}
+
+.currency-symbol,
+.percentage-symbol {
+  padding: 0 10px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.amount-input,
+.percentage-input {
+  flex: 1;
+  height: 38px;
+  padding: 0 10px;
+  border: none;
+  background: transparent;
+  font-size: 0.95rem;
+  color: #111827;
+  outline: none;
+}
+
+.amount-input.active,
+.percentage-input.active {
+  background-color: #fff;
+}
+
+.amount-input::placeholder,
+.percentage-input::placeholder {
+  color: #9ca3af;
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+  .input-fields {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  
+  .percentage-field {
+    width: 100%;
+  }
+} 

@@ -5,7 +5,7 @@ import './CauseDetailPage.css';
 
 // Components
 import DonationForm from '../components/DonationForm';
-import DonationConfirmationModal from '../components/DonationConfirmationModal';
+import ConfirmationModal from '../components/DonationConfirmationModal';
 
 // Utils
 import { formatCurrency, calculatePercentage, formatDate, getShareableUrl, getSocialShareUrls, image } from '../utils/helpers';
@@ -215,7 +215,7 @@ const CauseDetailPage: React.FC = () => {
                 </div>
                 <div className="cause-donations">
                   <div className="stat-label">Donations</div>
-                  <div className="stat-value">{cause.donations.toLocaleString()}</div>
+                  <div className="stat-value">{cause.donations?.toLocaleString()}</div>
                 </div>
               </div>
             </div>
@@ -376,9 +376,13 @@ const CauseDetailPage: React.FC = () => {
       </div>
 
       {/* Donation Confirmation Modal */}
-      <DonationConfirmationModal 
+      <ConfirmationModal 
         isOpen={showConfirmationModal}
         onClose={handleCloseModal}
+        title="Thank you!!"
+        action="Donation Confirmed"
+        message="— your donation has been received and recorded on the blockchain. We'll email you when your contribution is distributed or when there are important updates on the cause."
+        buttonText="Done"
       />
     </div>
   );
