@@ -40,8 +40,9 @@ class DisasterMonitorWorkflow:
     This workflow orchestrates the disaster analysis process:
     1. Receives a disaster query
     2. Executes the analysis activity
-    3. Returns the structured analysis result
-    4. Optionally starts an XRPL check transaction based on validation conditions
+    3. Inserts/updates the analysis result in the database
+    4. Returns the structured analysis result
+    5. Optionally starts an XRPL check transaction based on validation conditions
     
     The workflow is deterministic and can be retried if it fails.
     """
@@ -52,7 +53,7 @@ class DisasterMonitorWorkflow:
     async def run(self, query: DisasterQuery) -> dict:
         """Main workflow execution."""
         try:
-            logger.info(f"Starting workflow for customer {query.customer_id}")
+            logger.info(f"Starting workflow for customer {query.customer_id} and beneficiary {query.beneficiary_id}")
             
             # Execute the disaster analysis activity with retry policy
             analysis_result = await execute_activity(
@@ -64,17 +65,19 @@ class DisasterMonitorWorkflow:
 
             logger.info(f"ANALYSIS RESULT: {analysis_result}")
             
-            # Start the XRPL check transaction with retry policy
+            # Insert/update the analysis result in the database
             try:
-                await start_activity(
-                    blockchain_activity,
+                response_id = await start_activity(
+                    insert_disaster_analysis,
                     args=[query, analysis_result],
-                    start_to_close_timeout=ACTIVITY_TIMEOUTS["blockchain"],
+                    start_to_close_timeout=ACTIVITY_TIMEOUTS["disaster_analysis"],
                     retry_policy=ACTIVITY_RETRY_POLICY
                 )
+                
+                logger.info(f"Inserted/updated disaster response {response_id}")
             except Exception as e:
-                logger.error(f"Failed to start blockchain activity: {str(e)}")
-            
+                logger.error(f"Failed to insert disaster analysis: {str(e)}")
+
             return analysis_result
             
         except Exception as e:
@@ -122,7 +125,7 @@ async def analyze_disaster_activity(query: DisasterQuery) -> dict:
         disaster_activity_logger.info("Successfully created LangGraph workflow")
         
         # Create the full query with location context
-        full_query = f"Customer ID: {query.customer_id}\nLocation: {query.location}\nQuery: {query.query}"
+        full_query = f"Customer ID: {query.customer_id}\nBeneficiary ID: {query.beneficiary_id}\nLocation: {query.location}\nQuery: {query.query}"
         disaster_activity_logger.info(f"Processing query: {full_query}")
         
         # Run the LangGraph workflow
@@ -155,7 +158,8 @@ async def analyze_disaster_activity(query: DisasterQuery) -> dict:
                 "timestamp": final_response.timestamp.isoformat() if isinstance(final_response.timestamp, datetime) else str(final_response.timestamp),
                 "confidenceScore": final_response.confidence_score,
                 "isValid": final_response.is_valid.lower() == "true",
-                "validationReasoning": final_response.validation_reasoning
+                "validationReasoning": final_response.validation_reasoning,
+                "summarizedNews": final_response.summarized_news,
             }
             
             # Log the response details using pretty-printed JSON
@@ -206,5 +210,59 @@ async def blockchain_activity(query: DisasterQuery, response: dict) -> bool:
     except Exception as e:
         blockchain_activity_logger.error(f"Failed to create XRPL check transaction: {str(e)}")
         return False
+
+@activity.defn
+async def insert_disaster_analysis(query: DisasterQuery, analysis_result: dict) -> str:
+    """
+    Activity that inserts or updates a disaster analysis response in the database.
+    
+    Args:
+        query: The disaster query containing customer and beneficiary IDs
+        analysis_result: The disaster analysis response containing aid requirements
+        
+    Returns:
+        str: The response_id of the inserted/updated record
+    """
+    try:
+        from db.database import get_db, init_db
+        from db.sqlite_config import get_connection_string
+        disaster_activity_logger.info(f"Starting database insertion for disaster analysis")
+        disaster_activity_logger.info(f"Query: {query}")
+        disaster_activity_logger.info(f"Analysis result: {analysis_result}")
+        
+        # Initialize database with connection string
+        init_db(get_connection_string())
+        
+        # Get database instance
+        db = get_db()
+        
+        # Insert/update the disaster response
+        response_id = db.upsert_disaster_response(
+            customer_id=query.customer_id,
+            beneficiary_id=query.beneficiary_id,
+            location=analysis_result["location"],
+            disaster_type=analysis_result["disasterType"],
+            severity=analysis_result["severity"],
+            status=analysis_result["status"],
+            is_aid_required=analysis_result["isAidRequired"],
+            estimated_affected=analysis_result["estimatedAffected"],
+            required_aid_amount=analysis_result["requiredAidAmount"],
+            aid_currency=analysis_result["aidCurrency"],
+            evacuation_needed=analysis_result["evacuationNeeded"],
+            disaster_date=analysis_result["disasterDate"],
+            timestamp=datetime.fromisoformat(analysis_result["timestamp"]),
+            confidence_score=analysis_result["confidenceScore"],
+            is_valid=analysis_result["isValid"],
+            reasoning=analysis_result["reasoning"],
+            validation_reasoning=analysis_result["validationReasoning"],
+            summarized_news=analysis_result.get("summarizedNews"),
+        )
+        
+        disaster_activity_logger.info(f"Successfully inserted/updated disaster response {response_id}")
+        return response_id
+        
+    except Exception as e:
+        disaster_activity_logger.error(f"Failed to insert disaster analysis: {str(e)}")
+        raise
         
         

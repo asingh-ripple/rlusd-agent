@@ -6,7 +6,7 @@ Script to seed the database with test data.
 import os
 import sys
 from datetime import datetime
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, MetaData, inspect
 
 # Add the parent directory to the path to import the database module
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -115,15 +115,15 @@ def clear_tables(db):
     session = db.Session()
     try:
         print("Clearing existing data...")
-        # session.execute(text("DROP TABLE IF EXISTS disbursements_donations"))
-        # session.execute(text("DROP TABLE IF EXISTS disbursements"))
-        # session.execute(text("DROP TABLE IF EXISTS donations"))
-        # session.execute(text("DROP TABLE IF EXISTS causes"))
-        # session.execute(text("DROP TABLE IF EXISTS checks"))
-        # session.execute(text("DROP TABLE IF EXISTS transactions"))
-        # session.execute(text("DROP TABLE IF EXISTS customer_relationships"))
-        # session.execute(text("DROP TABLE IF EXISTS customers"))
-        session.commit()
+        
+        # If the database is a file, we can also delete and recreate it
+        if SQLITE_URL.startswith('sqlite:///'):
+            db_path = SQLITE_URL.replace('sqlite:///', '')
+            session.close()
+            if os.path.exists(db_path):
+                print(f"Removing database file: {db_path}")
+                os.remove(db_path)
+                print("Database file removed")
         print("Database cleared successfully")
     except Exception as e:
         session.rollback()
@@ -134,30 +134,14 @@ def clear_tables(db):
 
 def seed_database():
     """Seed the database with test data."""
+    # print("\n=== Clearing Database ===")
+    # Clear existing data
+    # clear_tables(db)
+
+    print("\n=== Seeding Database ===")
     # Initialize the database
     init_db(SQLITE_URL)
     db = get_db()
-    
-    print("\n=== Seeding Database ===")
-    
-    # Clear existing data
-    clear_tables(db)
-    
-    # Add customers
-    # print("\nAdding customers...")
-    # for customer_data in TEST_CUSTOMERS:
-    #     try:
-    #         print(f"\nAdding customer: {customer_data['customer_id']}")
-    #         db.add_customer(
-    #             customer_id=customer_data['customer_id'],
-    #             wallet_seed=customer_data['wallet_seed'],
-    #             customer_type=customer_data['customer_type'],
-    #             wallet_address=customer_data['wallet_address'],
-    #             email_address=customer_data['email_address']
-    #         )
-    #         print(f"✓ Successfully added {customer_data['customer_id']}")
-    #     except Exception as e:
-    #         print(f"Error adding {customer_data['customer_id']}: {str(e)}")
     
     # Add transactions
     # print("\nAdding transactions...")
@@ -181,8 +165,12 @@ def seed_database():
     print("\nSeeding causes...")
     session = db.Session()
     try:
+        print("Seeding causes...")
         seed_causes(session)
+        print("Causes seeded successfully")
+        print("Seeding customers...")
         seed_customers(session)
+        print("Customers seeded successfully")
     except Exception as e:
         print(f"Error seeding causes: {str(e)}")
     
@@ -196,15 +184,12 @@ def seed_database():
         print(f"\nCustomer: {customer.customer_id}")
         print(f"Type: {customer.customer_type}")
         print(f"Wallet: {customer.wallet_address}")
-    
-    # Verify relationships
-    # print("\nVerifying relationships...")
-    # for customer in customers:
-    #     if customer.customer_type == CustomerType.SENDER:
-    #         receivers = db.get_receivers(customer.customer_id)
-    #         print(f"\nSender {customer.customer_id} has {len(receivers)} receivers:")
-    #         for receiver in receivers:
-    #             print(f"- {receiver.customer_id}")
+    causes = db.get_all_causes()
+    print(f"\nFound {len(causes)} causes:")
+    for cause in causes:
+        print(f"\nCause: {cause.cause_id}")
+        print(f"Name: {cause.name}")
+        print(f"Balance: {cause.balance}")
     
     print("\n=== Database Seeding Complete ===")
 

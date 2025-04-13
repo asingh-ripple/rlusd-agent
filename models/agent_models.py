@@ -1,3 +1,4 @@
+from typing import Dict, List
 from pydantic import BaseModel, Field
 from langgraph.graph import MessagesState
 from datetime import datetime
@@ -6,7 +7,7 @@ from datetime import datetime
 class DisasterResponse(BaseModel):
     """Structured response for disaster monitoring.
     This model defines the format of the final disaster assessment output."""
-    reasoning: str = Field(description="Detailed reasoning about the situation")
+    reasoning: str = Field(default="", description="Detailed reasoning about the situation")
     disaster_type: str = Field(description="Type of disaster (e.g., typhoon, flood, earthquake)")
     severity: str = Field(description="Severity level (low, medium, high, critical)")
     location: str = Field(description="Affected area")
@@ -21,7 +22,7 @@ class DisasterResponse(BaseModel):
     confidence_score: str = Field(description="Percentage of how confident the model is in its decision (0-100, 2 decimal precision)")
     is_valid: str = Field(default="false", description="Whether the final response is valid ('true' or 'false')")
     validation_reasoning: str = Field(description="Detailed explanation of why the response is considered valid or invalid")
-
+    summarized_news: str = Field(description="Summary of latest news about the disaster")
     def __str__(self) -> str:
         return (
             f"Reasoning: {self.reasoning}\n"
@@ -37,12 +38,14 @@ class DisasterResponse(BaseModel):
             f"Timestamp: {self.timestamp}\n"
             f"Confidence Score: {self.confidence_score}%\n"
             f"Valid: {self.is_valid}\n"
-            f"Validation Reasoning: {self.validation_reasoning}"
+            f"Validation Reasoning: {self.validation_reasoning}\n"
+            f"Summarized News: {self.summarized_news}\n"
         )
     
 class DisasterQuery(BaseModel):
     """Query for disaster monitoring."""
     customer_id: str = Field(description="Customer ID")
+    beneficiary_id: str = Field(description="Beneficiary ID")
     location: str = Field(description="Location")
     query: str = Field(description="Query")
     query_date: str | None = Field(default=None, description="When the query was made (in this format: 'yyyy-mm-dd')")

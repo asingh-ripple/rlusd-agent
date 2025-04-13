@@ -2,20 +2,24 @@
 
 from typing import Dict, Any, List
 from langchain_core.tools import tool
-from GoogleNews import GoogleNews
-from datetime import datetime, timedelta, UTC
-from config.tools_config import SEARCH_CONFIG, AID_ESTIMATION_CONFIG
+from datetime import datetime, UTC
+from config.tools_config import AID_ESTIMATION_CONFIG
 from config.llm_config import get_configured_llm
 from config.logger_config import setup_logger
-
+from langchain_community.tools import DuckDuckGoSearchResults
+from db.database import get_db, init_db
+from db.sqlite_config import get_connection_string
+from models.agent_models import DisasterQuery
 # Configure logging
 logger = setup_logger(__name__)
-
+init_db(get_connection_string())
+db = get_db()
 # Initialize LLM, this could separate from the orchestrator LLM
 model = get_configured_llm()
 
+
 @tool
-def get_news(search_query: str) -> Dict[str, Any]:
+def get_news(search_query: str, query: DisasterQuery) -> Dict[str, Any]:
     """Search for latest news using Google News.
     
     Args:
@@ -30,44 +34,35 @@ def get_news(search_query: str) -> Dict[str, Any]:
             - timestamp: When the search was performed
     """
     logger.info(f"TOOL CALLING: get_news(search_query: {search_query})")
-    
+    logger.info(f"CUSTOMER ID: {query.customer_id}")
+    logger.info(f"BENEFICIARY ID: {query.beneficiary_id}")
     try:
-        # Initialize GoogleNews with English language and worldwide region
-        googlenews = GoogleNews(lang='en', region='US')
+        search = DuckDuckGoSearchResults(backend="news", output_format="list")
+        result = search.invoke(search_query)
+        logger.info(f"SEARCH RESULT: {result}")
+
+        # Extract first link if results exist
+        if result and len(result) > 0:
+            first_link = result[0].get("link", "")
+            logger.info(f"Extracted first link: [[[{first_link}]]]")
+
+        else:
+            logger.warning("No search links found")
         
-        # Set time range for the last day
-        end_date = datetime.now(UTC)
-        start_date = end_date - timedelta(days=SEARCH_CONFIG["default_start_date_delta"])
-        googlenews.set_time_range(start_date.strftime('%m/%d/%Y'), end_date.strftime('%m/%d/%Y'))
-        googlenews.set_encode('utf-8')
-        
-        # Search for news and get multiple pages
-        googlenews.search(search_query)
-        results = []
-        for page in range(1, SEARCH_CONFIG["max_pages"] + 1):
-            results.extend(googlenews.page_at(page))
-        
-        # Format results
-        formatted_results = []
-        for result in results:
-            formatted_result = {
-                'title': result.get('title', ''),
-                'link': result.get('link', ''),
-                'snippet': result.get('desc', '')[:1000],  # Limit snippet length
-                'source': result.get('media', ''),
-                'date': result.get('date', '')
-            }
-            formatted_results.append(formatted_result)
-        
-        logger.info(f"FOUND: {len(formatted_results)} news articles")
+        # Insert the news link into the database
+        if first_link:
+            logger.info(f"Inserting news link into the database: {first_link} for customer {query.customer_id} and beneficiary {query.beneficiary_id}")
+            db.upsert_news_link(query.customer_id, query.beneficiary_id, first_link)
+
         return {
-            'status': 'success',
-            'count': len(formatted_results),
-            'results': formatted_results,
-            'query': search_query,
-            'timestamp': datetime.now(UTC).isoformat(),
-            'link': formatted_results[0]['link'] if formatted_results else None
+            "status": "success",
+            "count": len(result),
+            "result": result,
+            "query": search_query,
+            "timestamp": datetime.now(UTC).isoformat()
         }
+    
+        
             
     except Exception as e:
         logger.error(f"ERROR: Search failed: {str(e)}")
@@ -77,6 +72,7 @@ def get_news(search_query: str) -> Dict[str, Any]:
             'query': search_query,
             'timestamp': datetime.now(UTC).isoformat()
         }
+        
 
 @tool
 def estimate_aid_requirements(disaster_info: str, affected_population: int) -> Dict[str, Any]:

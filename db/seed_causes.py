@@ -19,31 +19,6 @@ from db.database import Base, Cause, Customer, CustomerType
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "disaster_monitor.db")
 DB_CONNECTION_STRING = f"sqlite:///{DB_PATH}"
 
-# {
-#         "customer_id": "benefactor-4",
-#         "customer_name": "Flood Recovery in Louisiana",
-#         "email_address": "sender2@example.com",
-#         "wallet_address": "rMQhytkyM4dwSJkmoAY3qxThRX2M2Py8wc",
-#         "wallet_seed": "sEd56SLmRgdRENTjdEwU3AJezmGSD9",
-#         "customer_type": CustomerType.SENDER
-#     },
-#     {
-#         "customer_id": "benefactor-5",
-#         "customer_name": "Global Relief Fund",
-#         "email_address": "sender1@example.com",
-#         "wallet_address": "rQBsLAh7nQLdRJTJnCapCsbng5Eu8oTUHW",
-#         "wallet_seed": "sEdSCgE57Qvs6NHJDc6aRkXPz5A1AE",
-#         "customer_type": CustomerType.SENDER
-#     },
-#     {
-#         "customer_id": "benefactor-6",
-#         "customer_name": "Flood Recovery in Louisiana",
-#         "email_address": "sender2@example.com",
-#         "wallet_address": "rMQhytkyM4dwSJkmoAY3qxThRX2M2Py8wc",
-#         "wallet_seed": "sEd56SLmRgdRENTjdEwU3AJezmGSD9",
-#         "customer_type": CustomerType.SENDER
-#     },
-
 # Mock customers data
 mock_customers = [
     {
@@ -112,7 +87,8 @@ mock_causes = [
         "goal": 50000,
         "imageUrl": "images/flood-recovery.jpg",
         "category": "Natural Disasters",
-        "customer_id": "customer-1"
+        "customer_id": "customer-1",
+        "balance": 0
     },
     {
         "id": "7",
@@ -121,7 +97,8 @@ mock_causes = [
         "goal": 15000,
         "imageUrl": "images/rebuild-after.jpg",
         "category": "Natural Disasters",
-        "customer_id": "customer-2"
+        "customer_id": "customer-2",
+        "balance": 0
     },
     {
         "id": "8",
@@ -130,7 +107,8 @@ mock_causes = [
         "goal": 20000,
         "imageUrl": "images/mobile-clinics.jpg",
         "category": "Health Emergencies",
-        "customer_id": "customer-2"
+        "customer_id": "customer-2",
+        "balance": 0
     },
     {
         "id": "9",
@@ -139,7 +117,8 @@ mock_causes = [
         "goal": 6000,
         "imageUrl": "images/emergency-aid.jpg",
         "category": "Conflict Zone",
-        "customer_id": "customer-2"
+        "customer_id": "customer-2",
+        "balance": 0
     },
     {
         "id": "10",
@@ -148,7 +127,8 @@ mock_causes = [
         "goal": 1000,
         "imageUrl": "images/combating.jpg",
         "category": "Health Emergencies",
-        "customer_id": "customer-2"
+        "customer_id": "customer-2",
+        "balance": 0
     }
 ]
 
@@ -225,7 +205,8 @@ def seed_causes(session):
                 imageUrl=cause_data["imageUrl"],
                 category=cause_data["category"],
                 goal=cause_data["goal"],
-                customer_id=cause_data["customer_id"]
+                customer_id=cause_data["customer_id"],
+                balance=cause_data.get("balance", 0)  # Default to 0 if balance not provided
             )
             
             session.add(cause)

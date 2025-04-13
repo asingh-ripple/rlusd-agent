@@ -4,7 +4,7 @@ Database module for managing application data.
 
 from typing import Optional, List, Dict
 from enum import Enum
-from sqlalchemy import create_engine, Column, String, ForeignKey, Enum as SQLEnum, Numeric, event, DateTime, Integer, Float
+from sqlalchemy import create_engine, Column, String, ForeignKey, Enum as SQLEnum, Numeric, event, DateTime, Integer, Float, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.engine import Engine
@@ -12,6 +12,7 @@ from config.logger_config import setup_logger
 from datetime import datetime
 import uuid
 from sqlalchemy import select, func
+from decimal import Decimal
 
 logger = setup_logger(__name__)
 
@@ -172,8 +173,39 @@ class Cause(Base):
     imageUrl = Column(String, nullable=False)
     category = Column(String, nullable=False)
     goal = Column(Numeric(20, 6), nullable=False)  # 20 digits total, 6 decimal places
+    balance = Column(Numeric(20, 6), nullable=False)  # 20 digits total, 6 decimal places
+
     def __repr__(self):
         return f"<Cause(cause_id={self.cause_id}, name={self.name}, description={self.description}, imageUrl={self.imageUrl}, category={self.category})>"
+
+class DisasterResponse(Base):
+    """Model for storing disaster analysis responses."""
+    __tablename__ = "disaster_responses"
+    
+    response_id = Column(String(36), primary_key=True)
+    customer_id = Column(String(36), nullable=False)
+    beneficiary_id = Column(String(36), nullable=False)
+    location = Column(String(255), nullable=False)
+    disaster_type = Column(String(50), nullable=False)
+    severity = Column(String(20), nullable=False)
+    status = Column(String(20), nullable=False)
+    is_aid_required = Column(Boolean, nullable=False)
+    estimated_affected = Column(Integer, nullable=False)
+    required_aid_amount = Column(Float, nullable=False)
+    aid_currency = Column(String(10), nullable=False)
+    evacuation_needed = Column(Boolean, nullable=False)
+    disaster_date = Column(String(50), nullable=False)
+    timestamp = Column(DateTime, nullable=False)
+    confidence_score = Column(String(10), nullable=False)
+    is_valid = Column(Boolean, nullable=False)
+    reasoning = Column(String(1000), nullable=False)
+    validation_reasoning = Column(String(1000), nullable=False)
+    summarized_news = Column(String(2000), nullable=True)  # News summary
+    news_link = Column(String(2000), nullable=True)  # JSON string of news links
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<DisasterResponse(response_id={self.response_id}, location={self.location}, disaster_type={self.disaster_type})>"
 
 class Database:
     """Database manager for wallet operations."""
@@ -712,6 +744,7 @@ class Database:
             Cause.imageUrl,
             Cause.category,
             Cause.goal,
+            Cause.balance,
             func.sum(Donations.amount).label('total_donation_amount'),
             func.count(Donations.donation_id).label('donation_count')
         ).select_from(
@@ -720,6 +753,7 @@ class Database:
                 Cause.cause_id == Donations.cause_id
             )
         ).group_by(Cause.cause_id)
+        print(stmt)
         causes = session.execute(stmt).fetchall()
         try:
             return causes
@@ -745,6 +779,7 @@ class Database:
             Cause.imageUrl,
             Cause.category,
             Cause.goal,
+            Cause.balance,
             func.sum(Donations.amount).label('total_donation_amount'),
             func.count(Donations.donation_id).label('donation_count')
         ).select_from(
@@ -753,12 +788,210 @@ class Database:
                 Cause.cause_id == Donations.cause_id
             )
         ).group_by(Cause.cause_id).where(Cause.cause_id == cause_id)
+        print(stmt)
         try:
             cause = session.execute(stmt).fetchone()
             print(f"Cause: {cause}")
             return cause
         finally:
             session.close()
+    
+    def update_cause_balance(self, cause_id: str, balance: float) -> None:
+        """
+        Update the balance for a cause.
+        
+        Args:
+            cause_id: ID of the cause
+            balance: New balance amount
+        """
+        session = self.Session()
+        try:
+            print(f"Updating balance for cause {cause_id} to {balance}")
+            cause = session.query(Cause).filter_by(cause_id=cause_id).first()
+            if cause:
+                cause.balance = balance
+                session.commit()
+                logger.info(f"Updated balance for cause {cause_id} to {balance}")
+            else:
+                logger.warning(f"Cause {cause_id} not found")
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Error updating cause balance: {str(e)}")
+            raise
+        finally:
+            session.close()
+
+    def upsert_cause_balance(self, cause_id: str, balance: float) -> None:
+        """
+        Upsert the balance for a cause.
+        """
+        session = self.Session()
+        try:
+            cause = session.query(Cause).filter_by(cause_id=cause_id).first()
+            if cause:
+                # Convert float to Decimal for consistent type handling
+                balance_decimal = Decimal(str(balance))
+                
+                # Handle the case where cause balance is not set
+                if cause.balance is None:
+                    cause.balance = balance_decimal
+                else:
+                    cause.balance = cause.balance + balance_decimal
+                session.commit()
+                logger.info(f"Updated balance for cause {cause_id} to {balance_decimal}")
+            else:
+                logger.warning(f"Cause {cause_id} not found")
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Error upserting cause balance: {str(e)}")
+            raise
+        finally:
+            session.close()
+
+
+    def upsert_disaster_response(
+        self,
+        customer_id: str,
+        beneficiary_id: str,
+        location: str,
+        disaster_type: str,
+        severity: str,
+        status: str,
+        is_aid_required: bool,
+        estimated_affected: int,
+        required_aid_amount: float,
+        aid_currency: str,
+        evacuation_needed: bool,
+        disaster_date: str,
+        timestamp: datetime,
+        confidence_score: str,
+        is_valid: bool,
+        reasoning: str,
+        validation_reasoning: str,
+        summarized_news: Optional[str] = None
+    ) -> str:
+        """
+        Insert or update a disaster response in the database.
+        If a response exists for the given customer_id and beneficiary_id, it will be updated.
+        Otherwise, a new response will be created.
+        
+        Args:
+            customer_id: ID of the customer
+            beneficiary_id: ID of the beneficiary
+            location: Affected area
+            disaster_type: Type of disaster
+            severity: Severity level
+            status: Current status
+            is_aid_required: Whether aid is required
+            estimated_affected: Number of affected people
+            required_aid_amount: Amount of aid required
+            aid_currency: Currency for aid amount
+            evacuation_needed: Whether evacuation is needed
+            disaster_date: When the disaster occurred
+            timestamp: When the assessment was made
+            confidence_score: Confidence in the assessment
+            is_valid: Whether the response is valid
+            reasoning: Detailed reasoning
+            validation_reasoning: Validation explanation
+            summarized_news: Summary of latest news about the disaster (optional)
+            news_link: link to the news article
+            
+        Returns:
+            str: The response_id (new or existing)
+        """
+        session = self.Session()
+        try:
+            # Check if a response already exists for this customer and beneficiary
+            existing_response = session.query(DisasterResponse).filter(
+                DisasterResponse.customer_id == customer_id,
+                DisasterResponse.beneficiary_id == beneficiary_id
+            ).first()
+            
+            if existing_response:
+                # Update existing response
+                existing_response.location = location
+                existing_response.disaster_type = disaster_type
+                existing_response.severity = severity
+                existing_response.status = status
+                existing_response.is_aid_required = is_aid_required
+                existing_response.estimated_affected = estimated_affected
+                existing_response.required_aid_amount = required_aid_amount
+                existing_response.aid_currency = aid_currency
+                existing_response.evacuation_needed = evacuation_needed
+                existing_response.disaster_date = disaster_date
+                existing_response.timestamp = timestamp
+                existing_response.confidence_score = confidence_score
+                existing_response.is_valid = is_valid
+                existing_response.reasoning = reasoning
+                existing_response.validation_reasoning = validation_reasoning
+                existing_response.summarized_news = summarized_news
+                
+                logger.info(f"Updated existing disaster response {existing_response.response_id}")
+                session.commit()
+                return existing_response.response_id
+            else:
+                # Create new response record
+                response_id = str(uuid.uuid4())
+                response = DisasterResponse(
+                    response_id=response_id,
+                    customer_id=customer_id,
+                    beneficiary_id=beneficiary_id,
+                    location=location,
+                    disaster_type=disaster_type,
+                    severity=severity,
+                    status=status,
+                    is_aid_required=is_aid_required,
+                    estimated_affected=estimated_affected,
+                    required_aid_amount=required_aid_amount,
+                    aid_currency=aid_currency,
+                    evacuation_needed=evacuation_needed,
+                    disaster_date=disaster_date,
+                    timestamp=timestamp,
+                    confidence_score=confidence_score,
+                    is_valid=is_valid,
+                    reasoning=reasoning,
+                    validation_reasoning=validation_reasoning,
+                    summarized_news=summarized_news
+                )
+                session.add(response)
+                logger.info(f"Created new disaster response {response_id}")
+                session.commit()
+                return response_id
+            
+        except Exception as e:
+            session.rollback()
+            logger.error(f"Error upserting disaster response: {str(e)}")
+            raise
+        finally:
+            session.close()
+
+    def upsert_news_link(self, customer_id: str, beneficiary_id: str, news_link: str) -> None:
+        """
+        Insert a news link into the database.
+        If a customer and beneficary doesn't exist, it will be created.
+        """
+        session = self.Session()
+        try:
+            # Check if a response already exists for this customer and beneficiary
+            existing_response = session.query(DisasterResponse).filter(
+                DisasterResponse.customer_id == customer_id,
+                DisasterResponse.beneficiary_id == beneficiary_id
+            ).first()
+
+            if existing_response:
+                existing_response.news_link = news_link
+                session.commit()
+                logger.info(f"Updated news link for disaster response {existing_response.response_id}")
+            else:
+                logger.warning(f"No disaster response found for customer {customer_id} and beneficiary {beneficiary_id}")
+        except Exception as e:
+            logger.error(f"Error inserting news link: {str(e)}")
+            raise
+        finally:
+            session.close()
+
+
+
 # Module-level database instance
 _db = None
 

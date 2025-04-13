@@ -255,6 +255,7 @@ async def execute_payment(sender_id, beneficiary_id, currency, amount):
         
         # Check the result
         if response.is_successful():
+            print(f"response: {response}")
             print("\nPayment successful!")
             print(f"Transaction hash: {response.result['hash']}")
             
@@ -268,8 +269,11 @@ async def execute_payment(sender_id, beneficiary_id, currency, amount):
                 transaction_type=TransactionType.PAYMENT,
                 status=TransactionStatus.SUCCESS
             )
-            
-            # Process disbursements
+
+            sender_balance = await get_wallet_balance(sender_wallet.address, client)
+            db.upsert_cause_balance(sender_id, amount)
+
+            # Process disbursements to notify the donor in FIFO order
             disbursements = []
             try:
                 disbursements = process_disbursement(

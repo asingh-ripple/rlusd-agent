@@ -13,7 +13,7 @@ The module initializes three LLM models with different capabilities:
 from langchain_core.messages import HumanMessage, SystemMessage
 from models.agent_models import DisasterResponse
 from tools.disaster_analysis_tools import all_disaster_analyzers
-from config.prompts import NEWS_SYSTEM_PROMPT, STRUCTURED_RESPONSE_PROMPT, VALIDATION_PROMPT
+from config.prompts import SEARCH_SYSTEM_PROMPT, STRUCTURED_RESPONSE_PROMPT, VALIDATION_PROMPT
 from config.llm_config import get_configured_llm
 from config.logger_config import setup_logger
 
@@ -38,14 +38,15 @@ def call_model(state):
     # Add system prompt for first-time initialization
     if len(state["messages"]) == 1:
         logger.info("INITIALIZATION: Adding system message for severity analysis")
-        system_message = SystemMessage(content=NEWS_SYSTEM_PROMPT)
+        system_message = SystemMessage(content=SEARCH_SYSTEM_PROMPT)
         state["query"] = state["messages"][0].content
         state["messages"].insert(0, system_message)
     
     logger.info("ACTION: Starting model analysis...")
+    print("STATE: ", state)
     response = model_with_tools.invoke(state["messages"])
-     
-    # Log any tool calls made by the model
+    print("RESPONSE FROM CALL MODEL: ", response)
+
     if hasattr(response, 'tool_calls') and response.tool_calls:
         for tool_call in response.tool_calls:
             if isinstance(tool_call, dict):
@@ -62,8 +63,20 @@ def respond(state):
     
     # Use structured output model to format the final response
     structured_prompt = SystemMessage(content=STRUCTURED_RESPONSE_PROMPT)
+    
+    # Get the human message (it's at index 1 after the system message)
+    human_message = state["messages"][1]
+    
+    # Get the last AI message which contains the analysis
+    last_ai_message = state["messages"][-1]
+    print("LAST AI MESSAGE: ", last_ai_message)
+
+    # Combine the human message and AI analysis for context
+    combined_content = f"{human_message.content}\n\nAnalysis: {last_ai_message.content}"
+    print("COMBINED CONTENT: ", combined_content)
+    
     response = model_with_structured_output.invoke(
-        [structured_prompt, HumanMessage(content=state["messages"][-2].content)]
+        [structured_prompt, HumanMessage(content=combined_content)]
     )
 
     return {"final_response": response}
