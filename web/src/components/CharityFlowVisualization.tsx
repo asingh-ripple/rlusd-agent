@@ -211,7 +211,40 @@ const CharityFlowVisualization: React.FC<{ graphData?: GraphData }> = ({ graphDa
   useEffect(() => {
     // Update graphData if initialGraphData changes
     if (initialGraphData) {
-      setGraphData(initialGraphData);
+      // Make sure we have at least two nodes (donor and charity)
+      if (initialGraphData.nodes.length > 0) {
+        // Find donor node (level 0) and charity node (level 1)
+        const donorNode = initialGraphData.nodes.find(node => node.level === 0);
+        const charityNode = initialGraphData.nodes.find(node => node.level === 1);
+        
+        // If we have both donor and charity nodes but no edges, add a default edge
+        if (donorNode && charityNode && (initialGraphData.edges.length === 0 || 
+            !initialGraphData.edges.some(edge => edge.source === donorNode.id && edge.target === charityNode.id))) {
+          
+          // Create a modified version of the graph data with the donor-charity edge
+          const enhancedGraphData = {
+            ...initialGraphData,
+            edges: [
+              ...initialGraphData.edges,
+              {
+                source: donorNode.id,
+                target: charityNode.id,
+                amount: 0,
+                label: "Donation Flow",
+                rawAmount: "0 RLUSD",
+                hashes: ["pending-transaction"]
+              }
+            ]
+          };
+          
+          setGraphData(enhancedGraphData);
+        } else {
+          setGraphData(initialGraphData);
+        }
+      } else {
+        setGraphData(initialGraphData);
+      }
+      
       setLoading(false);
       return;
     }
@@ -390,7 +423,7 @@ const CharityFlowVisualization: React.FC<{ graphData?: GraphData }> = ({ graphDa
   const calculateLayout = (): Record<string, Position> => {
     if (!graphData) return {};
     
-    const levelGap = 300; // Horizontal gap between levels
+    const levelGap = 400; // Increased horizontal gap between levels (was 300)
     const nodeGap = 100; // Vertical gap between nodes in same level
     const nodeWidth = 240;
     const nodeHeight = 60;
@@ -588,12 +621,19 @@ const CharityFlowVisualization: React.FC<{ graphData?: GraphData }> = ({ graphDa
                   x={tooltipX}
                   y={pos.y - 100}
                   width="320"
-                  height="52"
+                  height="80"
                   style={{ pointerEvents: "none", zIndex: 1000 }}
                 >
                   <div className="node-tooltip">
+                    <div className="node-name">{node.name}</div>
                     <div className="address">{node.id}</div>
                     <div className="instruction">Click to copy address</div>
+                    {node.totalOutgoing !== undefined && (
+                      <div className="node-stats">Outgoing: {node.totalOutgoing.toFixed(2)}</div>
+                    )}
+                    {node.totalIncoming !== undefined && (
+                      <div className="node-stats">Incoming: {node.totalIncoming.toFixed(2)}</div>
+                    )}
                   </div>
                 </foreignObject>
               ) : null;
@@ -607,25 +647,46 @@ const CharityFlowVisualization: React.FC<{ graphData?: GraphData }> = ({ graphDa
               if (!sourcePos || !targetPos) return null;
               
               const { midpoint } = getEdgePathInfo(sourcePos, targetPos);
-              const isHovered = hoveredEdge === `${edge.source}-${edge.target}`;
+              const edgeId = `${edge.source}-${edge.target}`;
+              const isHovered = hoveredEdge === edgeId;
               
-              return isHovered && edge.hashes && edge.hashes.length > 0 ? (
+              // Find source and target node names
+              const sourceNode = graphData.nodes.find(n => n.id === edge.source);
+              const targetNode = graphData.nodes.find(n => n.id === edge.target);
+              const sourceName = sourceNode ? sourceNode.name : 'Unknown';
+              const targetName = targetNode ? targetNode.name : 'Unknown';
+              
+              // Check if this is a real transaction or just a display edge
+              const isPendingTransaction = edge.hashes.length === 1 && edge.hashes[0] === 'pending-transaction';
+              
+              return isHovered ? (
                 <foreignObject
                   key={`tooltip-${edge.source}-${edge.target}`}
                   x={midpoint.x + 50}
-                  y={midpoint.y - 15 - (edge.hashes.length * 20)}
+                  y={midpoint.y - 15 - (isPendingTransaction ? 0 : edge.hashes.length * 20)}
                   width="360"
-                  height={edge.hashes.length * 28 + 60}
+                  height={isPendingTransaction ? 100 : (edge.hashes.length * 28 + 100)}
                   style={{ pointerEvents: "none", zIndex: 1000 }}
                 >
                   <div className="edge-tooltip">
-                    <div className="title">Transaction Hashes:</div>
-                    <div className="hash-list">
-                      {edge.hashes.map((hash, index) => (
-                        <div key={index} className="hash">{hash}</div>
-                      ))}
-                    </div>
-                    <div className="instruction">Click to copy all transaction hashes</div>
+                    <div className="title">{sourceName} → {targetName}</div>
+                    <div className="amount">{edge.rawAmount}</div>
+                    
+                    {isPendingTransaction ? (
+                      <div className="pending-message">
+                        No transactions recorded yet. Make a donation to see transaction details.
+                      </div>
+                    ) : (
+                      <>
+                        <div className="title">Transaction Hashes:</div>
+                        <div className="hash-list">
+                          {edge.hashes.map((hash, index) => (
+                            <div key={index} className="hash">{hash}</div>
+                          ))}
+                        </div>
+                        <div className="instruction">Click to copy all transaction hashes</div>
+                      </>
+                    )}
                   </div>
                 </foreignObject>
               ) : null;

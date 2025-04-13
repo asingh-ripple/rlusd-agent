@@ -20,20 +20,6 @@ const Hero: React.FC = () => {
             </Link>
           </div>
         </div>
-        <div className="hero-stats">
-          <div className="stat-item">
-            <span className="stat-value">$2.3M</span>
-            <span className="stat-label">Total Donations</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-value">17+</span>
-            <span className="stat-label">Countries Reached</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-value">100%</span>
-            <span className="stat-label">Transparent</span>
-          </div>
-        </div>
       </div>
     </section>
   );

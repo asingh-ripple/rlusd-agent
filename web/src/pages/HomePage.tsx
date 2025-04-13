@@ -2,13 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Hero from '../components/Hero';
 import './HomePage.css';
 import { Cause } from './CauseDetailPage'; // Import Cause interface
-import { image } from '../utils/helpers';
 import CauseCardV2 from '../components/CauseCardV2';
-// import conflict from '../public/images/conflict.jpg';
-// import health from '../public/images/health.jpg';
-// import natural from '../public/images/natural.jpg';
-// import water from '../public/images/water.jpg';
-// import hurricane from '../public/images/hurricane-relief.jpg';
 
 
 const HomePage: React.FC = () => {
