@@ -105,17 +105,25 @@ class CauseDetailsResponse(BaseModel):
     imageUrl: Optional[str]
     category: Optional[str]
     customer_id: Optional[str]
-    # customer_type: str
-    # wallet_address: Optional[str]
-    # email: Optional[str]
+    balance: Optional[float] = 0
     donations: Optional[int] = 0
     raised: Optional[int] = 0
+
+class DonationDetailsResponse(BaseModel):
+    donation_id: str
+    customer_id: Optional[str]
+    cause_id: Optional[str]
+    amount: Optional[float] = 0
+    currency: Optional[str] = "RLUSD"
+    donation_date: Optional[datetime] = None
+    status: Optional[str] = "PENDING"
 
     class Config:
         from_attributes = True
 
 class PaymentRequest(BaseModel):
     sender_id: str
+    cause_id: str
     receiver_id: str
     currency: str
     amount: float
@@ -315,6 +323,7 @@ async def get_cause_details(cause_id: str):
             "imageUrl": cause.imageUrl,
             "category": cause.category,
             "customer_id": cause.customer_id,
+            "balance": cause.balance,
             "donations": cause_with_donations.donation_count if cause_with_donations.donation_count else 0,
             "raised": cause_with_donations.total_donation_amount if cause_with_donations.total_donation_amount else 0
         }
@@ -342,11 +351,39 @@ async def get_cause_details(limit: Optional[int] = 10):
                 "imageUrl": cause.imageUrl,
                 "category": cause.category,
                 "customer_id": cause.customer_id,
+                "balance": cause.balance,
                 "donations": cause.donation_count if cause.donation_count else 0,
                 "raised": cause.total_donation_amount if cause.total_donation_amount else 0
             })
         
         return cause_dict
+    except Exception as e:
+        logger.error(f"Error retrieving cause details: {e}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving cause details: {str(e)}")
+
+@app.get("/donations", response_model=List[DonationDetailsResponse])
+async def get_donations(cause_id: str):
+    """Get all customer details with a left join between customers and customer_details tables."""
+    try:
+        if cause_id:
+            donations = db.get_donation_by_cause_id(cause_id)
+        else:
+            donations = db.get_all_donations()
+        
+        # Convert to response format
+        donation_dict = []
+        for donation in donations:
+            donation_dict.append({
+                "donation_id": donation.donation_id,
+                "customer_id": donation.customer_id,
+                "cause_id": donation.cause_id,
+                "amount": donation.amount,
+                "currency": donation.currency,
+                "donation_date": donation.donation_date,
+                "status": donation.status
+            })
+        
+        return donation_dict
     except Exception as e:
         logger.error(f"Error retrieving cause details: {e}")
         raise HTTPException(status_code=500, detail=f"Error retrieving cause details: {str(e)}")
@@ -474,6 +511,7 @@ async def execute_payment_endpoint(payment_request: PaymentRequest):
         # Execute the payment
         success, transaction_hash, disbursements = await execute_payment(
             sender_id=payment_request.sender_id,
+            cause_id=payment_request.cause_id,
             beneficiary_id=payment_request.receiver_id,
             currency=payment_request.currency,
             amount=payment_request.amount

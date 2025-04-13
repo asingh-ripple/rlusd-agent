@@ -122,55 +122,6 @@ const LatestCauses: React.FC<LatestCausesProps> = ({ causes, loading }) => {
         <div className="causes-grid">
           {causes.map((cause: Cause) => (
             <CauseCardV2 key={cause.cause_id} cause={cause} />
-            // <div key={cause.cause_id} className="cause-card">
-            //   <div className="cause-image">
-            //     <img 
-            //       src={image[cause.imageUrl]} 
-            //       alt={cause.name}
-            //       onError={(e) => {
-            //         // Fallback to placeholder if image fails to load
-            //         const target = e.target as HTMLImageElement;
-            //         target.src = '/images/causes/placeholder.svg';
-            //       }}
-            //     />
-            //   </div>
-              
-            //   <div className="cause-content">
-            //     <div className="cause-category">
-            //       <span>{cause.category}</span>
-            //     </div>
-            //     <h3 className="cause-title">{cause.name}</h3>
-            //     <p className="cause-description">
-            //       {typeof cause.description === 'string' 
-            //         ? `${cause.description.substring(0, 120)}...`
-            //         : ''}
-            //     </p>
-                
-            //     <div className="cause-progress">
-            //       <div className="progress-bar">
-            //         <div 
-            //           className="progress-fill" 
-            //           style={{ width: `${Math.min(100, (cause.raised / cause.goal) * 100)}%` }}
-            //         ></div>
-            //       </div>
-            //     </div>
-                
-            //     <div className="cause-stats">
-            //       <div className="cause-goal">
-            //         <p className="stat-label">Goal: ${cause.goal.toLocaleString()}</p>
-            //         <p className="stat-value">Raised: ${cause.raised.toLocaleString()}</p>
-            //       </div>
-            //       <div className="cause-donations">
-            //         <p className="stat-label">{cause.donations}</p>
-            //         <p className="stat-value">donations</p>
-            //       </div>
-            //     </div>
-                
-            //     <a href={`/causes/${cause.cause_id}`} className="view-details-button">
-            //       View Details
-            //     </a>
-            //   </div>
-            // </div>
           ))}
         </div>
       </div>

@@ -188,6 +188,7 @@ def seed_database():
     print(f"\nFound {len(causes)} causes:")
     for cause in causes:
         print(f"\nCause: {cause.cause_id}")
+        print(f"Customer: {cause.customer_id}")
         print(f"Name: {cause.name}")
         print(f"Balance: {cause.balance}")
     

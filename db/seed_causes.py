@@ -81,53 +81,53 @@ mock_customers = [
 # Mock data from CauseDetailPage.tsx and other React components
 mock_causes = [
     {
-        "id": "2",
+        "id": "1",
         "title": "Flood Recovery in Louisiana",
         "description": "Help families rebuild after the devastating floods in Louisiana.",
         "goal": 50000,
         "imageUrl": "images/flood-recovery.jpg",
         "category": "Natural Disasters",
-        "customer_id": "customer-1",
+        "customer_id": "benefactor-1",
         "balance": 0
     },
     {
-        "id": "7",
+        "id": "2",
         "title": "Rebuilding After the Storm with ShelterNow",
         "description": "Specializing in post-disaster recovery, ShelterNow helps communities build homes using local labor and sustainable materials. Support long-term recovery after natural catastrophes.",
         "goal": 15000,
         "imageUrl": "images/rebuild-after.jpg",
         "category": "Natural Disasters",
-        "customer_id": "customer-2",
+        "customer_id": "benefactor-2",
         "balance": 0
     },
     {
-        "id": "8",
+        "id": "3",
         "title": "Mobile Clinics For Crisis Zones With HealthBridge",
         "description": "HealthBridge deploys mobile clinics in underserved areas affected by conflicts and pandemics. Every donation fuels life-saving diagnoses and care in real time.",
         "goal": 20000,
         "imageUrl": "images/mobile-clinics.jpg",
         "category": "Health Emergencies",
-        "customer_id": "customer-2",
+        "customer_id": "benefactor-2",
         "balance": 0
     },
     {
-        "id": "9",
+        "id": "4",
         "title": "Emergency Aid in Gaza with Humanity Frontline",
         "description": "Providing food, medical aid, and psychological support for families affected by conflict in Gaza. Your donation goes directly to vetted local workers on the ground.",
         "goal": 6000,
         "imageUrl": "images/emergency-aid.jpg",
         "category": "Conflict Zone",
-        "customer_id": "customer-2",
+        "customer_id": "benefactor-2",
         "balance": 0
     },
     {
-        "id": "10",
+        "id": "5",
         "title": "Combating Cholera with CleanMedic Haiti",
         "description": "Fighting the cholera outbreak with emergency IV fluids, antibiotics, and bed treatment. Your contribution supports local nurses and medics on the frontlines.",
         "goal": 1000,
         "imageUrl": "images/combating.jpg",
         "category": "Health Emergencies",
-        "customer_id": "customer-2",
+        "customer_id": "benefactor-2",
         "balance": 0
     }
 ]

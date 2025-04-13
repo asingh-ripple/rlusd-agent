@@ -22,6 +22,11 @@ interface CharityAllocation {
   amount: number;
 }
 
+const ADMIN_USER = {
+  userId: 'benefactor-2',
+  id: '2'
+}
+
 // News Card Component
 const NewsCard = ({ source, time, title, content }: NewsCardProps) => {
   return (
@@ -72,6 +77,7 @@ const AdminPage: React.FC = () => {
   const [allocations, setAllocations] = useState<CharityAllocation[]>([]);
   const [totalAllocated, setTotalAllocated] = useState(0);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
   
   const handleCloseModal = () => {
     setShowConfirmationModal(false);
@@ -135,7 +141,7 @@ const AdminPage: React.FC = () => {
   ];
 
   const fetchCause = () => {
-    fetch("http://localhost:8000/causes/2", {
+    fetch(`http://localhost:8000/causes/${ADMIN_USER.id}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -183,7 +189,7 @@ const AdminPage: React.FC = () => {
   
   // Calculate remaining funds
   const remainingFunds = (cause?.goal ?? 0) - (cause?.raised ?? 0);
-  const TOTAL_AVAILABLE_FUNDS = (cause?.raised ?? 0);
+  const TOTAL_AVAILABLE_FUNDS = (cause?.raised ?? 0) - (cause?.balance ?? 0);
   
   // Handle distribute button click
   const handleDistribute = () => {
@@ -195,16 +201,17 @@ const AdminPage: React.FC = () => {
     if (totalAllocated > TOTAL_AVAILABLE_FUNDS) {
       return;
     }
+    setLoading(true);
     const promises = allocations.map(allocation => {
-      console.log(allocation);
       return fetch("http://localhost:8000/disburse", {
         method: "POST",
         headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        sender_id: 'benefactor-1',
+        sender_id: ADMIN_USER.userId,
         receiver_id: allocation.receiver_id,
+        cause_id: cause?.cause_id ?? '',
         currency: 'USD',
         amount: allocation.amount
         }),
@@ -215,6 +222,7 @@ const AdminPage: React.FC = () => {
     Promise.all(promises).then((responses: any) => {
       setDistributeStatus(responses);
       setShowConfirmationModal(true);
+      setLoading(false);
     });
   };
 
@@ -225,6 +233,31 @@ const AdminPage: React.FC = () => {
       backgroundColor: '#f8f9fa',
       lineHeight: '1.5'
     }}>
+      {/* Loading spinner overlay */}
+      {loading && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(255, 255, 255, 0.7)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            width: '50px',
+            height: '50px',
+            border: '4px solid rgba(0, 0, 0, 0.1)',
+            borderRadius: '50%',
+            borderTop: '4px solid #4f46e5',
+            animation: 'spin 1s linear infinite'
+          }}></div>
+        </div>
+      )}
+      
       {/* Hero section */}
       <div style={{
         width: '100%',

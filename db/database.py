@@ -681,7 +681,7 @@ class Database:
         finally:
             session.close()
     
-    def limited_causes(self, limit: int) -> List[Cause]:
+    def get_causes_with_limit(self, limit: int) -> List[Cause]:
         """
         Get a limited number of causes.
         """
@@ -694,6 +694,13 @@ class Database:
         """
         session = self.Session()
         return session.query(Donations).filter_by(cause_id=cause_id).all()
+    
+    def get_all_donations(self) -> List[Donations]:
+        """
+        Get all donations.
+        """
+        session = self.Session()
+        return session.query(Donations).all()
 
     def get_cause_from_address(self, wallet_address: str) -> Optional[Cause]:
         """
@@ -753,7 +760,6 @@ class Database:
                 Cause.cause_id == Donations.cause_id
             )
         ).group_by(Cause.cause_id)
-        print(stmt)
         causes = session.execute(stmt).fetchall()
         try:
             return causes
@@ -788,7 +794,6 @@ class Database:
                 Cause.cause_id == Donations.cause_id
             )
         ).group_by(Cause.cause_id).where(Cause.cause_id == cause_id)
-        print(stmt)
         try:
             cause = session.execute(stmt).fetchone()
             print(f"Cause: {cause}")

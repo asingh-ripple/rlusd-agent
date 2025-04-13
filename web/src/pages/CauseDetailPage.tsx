@@ -6,6 +6,7 @@ import './CauseDetailPage.css';
 // Components
 import DonationForm from '../components/DonationForm';
 import ConfirmationModal from '../components/DonationConfirmationModal';
+import CharityFlowGraph from '../components/CharityFlowGraph';
 
 // Utils
 import { formatCurrency, calculatePercentage, formatDate, getShareableUrl, getSocialShareUrls, image } from '../utils/helpers';
@@ -17,6 +18,7 @@ export interface Cause {
   description: string;
   goal: number;
   raised: number;
+  balance: number;
   donations: number;
   imageUrl: string;
   category: 'Natural Disasters' | 'Conflict Zone' | 'Health Emergencies' | 'Food & Water Crisis';
@@ -38,6 +40,14 @@ interface RelatedCause {
   title: string;
   imageUrl: string;
   category: string;
+}
+
+interface Donation {
+  donation_id: string;
+  customer_id: string;
+  cause_id: string;
+  amount: number;
+  currency: string;
 }
 
 // Mock data for fund allocation
@@ -74,6 +84,45 @@ const aboutOrg = {
   description: "Global Relief Network was founded in 2005 by Dr. Sarah Chen, who witnessed firsthand the critical importance of rapid response after the Southeast Asian tsunami.\n\nToday, GRN operates with a network of over 5,000 trained emergency responders worldwide, ready to deploy within hours of a disaster. Our innovative use of technology - including drone surveys, satellite communications, and blockchain-verified supply chains - allows us to reach affected communities faster and more efficiently than traditional models.\n\nWe believe in a community-led approach, working alongside local partners to ensure aid is culturally appropriate, sustainable, and empowering rather than creating dependency."
 };
 
+// Fund flow visualization mock data
+const fundFlowData = {
+  source: {
+    name: "Global Charity",
+    id: "global-charity"
+  },
+  intermediary: {
+    name: "Global Relief Disaster Response",
+    id: "global-relief"
+  },
+  destinations: [
+    {
+      name: "Relief Riders Kenya",
+      id: "relief-riders",
+      percentage: 25
+    },
+    {
+      name: "CleanWater Uganda",
+      id: "cleanwater",
+      percentage: 20
+    },
+    {
+      name: "ShelterNow Nairobi",
+      id: "shelternow",
+      percentage: 30
+    },
+    {
+      name: "Mobile Medics Africa",
+      id: "mobile-medics",
+      percentage: 15
+    },
+    {
+      name: "Unknown Address",
+      id: "unknown",
+      percentage: 10
+    }
+  ]
+};
+
 const CauseDetailPage: React.FC = () => {
   const params = useParams();
   const [cause, setCause] = useState<Cause | null>(null);
@@ -81,11 +130,18 @@ const CauseDetailPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'story' | 'updates'>('story');
   const [donation, setDonation] = useState<string>('');
   const [showConfirmationModal, setShowConfirmationModal] = useState<boolean>(false);
-
+  const [donations, setDonations] = useState<Donation[]>([]);
   const fetchCause = async (causeId: string): Promise<Cause> => {
     // In a real application, this would be an API call
     
   return fetch(`http://localhost:8000/causes/${causeId}`)
+    .then(response => response.json())
+  };
+
+  const fetchDonations = async (causeId: string): Promise<Donation[]> => {
+    // In a real application, this would be an API call
+    
+  return fetch(`http://localhost:8000/donations?cause_id=${causeId}`)
     .then(response => response.json())
   };
 
@@ -106,7 +162,22 @@ const CauseDetailPage: React.FC = () => {
     if (donation) {
       setShowConfirmationModal(true);
     }
+    fetchDonations(cause?.cause_id || '').then(donations => {
+      console.log(donations);
+      setDonations(donations);
+    }).catch(error => {
+      console.error('Error fetching donations:', error);
+    });
   }, [donation]);
+
+  useEffect(() => {
+    fetchDonations(cause?.cause_id || '').then(donations => {
+      console.log(donations);
+      setDonations(donations);
+    }).catch(error => {
+      console.error('Error fetching donations:', error);
+    });
+  }, [cause?.cause_id]);
 
   const handleDonationSubmit = (amount: number, cause_id: string, customer_id: string) => {
     // In a real app, this would submit to a payment processor
@@ -258,7 +329,7 @@ const CauseDetailPage: React.FC = () => {
                           </div>
                         ))}
                       </div>
-                      
+                    
                       {/* Testimonials section */}
                       <h2 className="section-title">Real Stories from the Field</h2>
                       <div className="testimonials">
@@ -288,7 +359,15 @@ const CauseDetailPage: React.FC = () => {
                       </div>
                     </>
                   ) : (
-                    <p>{cause.description}</p>
+                    <>
+                      <p>{cause.description}</p>
+                      <h2 className="section-title">Fund Distribution Visualization</h2>
+                      <p>This interactive visualization shows how funds flow from donors through our organization to the local charities on the ground.</p>
+                      
+                      <div className="fund-flow-visualization">
+                        <CharityFlowGraph data={fundFlowData} />
+                      </div>
+                    </>
                   )}
                 </div>
               ) : (

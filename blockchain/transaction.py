@@ -94,7 +94,7 @@ async def create_wallet_transaction(query: DisasterQuery, response: Dict[str, An
 
     return payment_response.result
 
-def process_disbursement(cause_id: str, amount: float, transaction_hash: str) -> List[Dict[str, Any]]:
+def process_disbursement(cause_id: str, sender_id: str, beneficiary_id: str, amount: float, transaction_hash: str) -> List[Dict[str, Any]]:
     """
     Process disbursement for a cause with the given amount.
     
@@ -108,6 +108,8 @@ def process_disbursement(cause_id: str, amount: float, transaction_hash: str) ->
     """
     print(f"\nProcessing disbursement:")
     print(f"  Cause ID: {cause_id}")
+    print(f"  Sender ID: {sender_id}")
+    print(f"  Beneficiary ID: {beneficiary_id}")
     print(f"  Amount: {amount} RLUSD")
     print(f"  Transaction Hash: {transaction_hash}")
     
@@ -142,6 +144,7 @@ def process_disbursement(cause_id: str, amount: float, transaction_hash: str) ->
             print(f"    Customer: {donation.customer_id}")
             print(f"    Amount: {donation.amount} {donation.currency}")
             print(f"    Status: {donation.status}")
+            print(f"    Cause ID: {donation.cause_id}")
         
         # Calculate disbursements
         remaining_amount = float(amount)
@@ -205,7 +208,7 @@ def process_disbursement(cause_id: str, amount: float, transaction_hash: str) ->
     finally:
         session.close()
 
-async def execute_payment(sender_id, beneficiary_id, currency, amount):
+async def execute_payment(cause_id, sender_id, beneficiary_id, currency, amount):
     """
     Sends RLUSD from a wallet to a destination address
     
@@ -271,13 +274,15 @@ async def execute_payment(sender_id, beneficiary_id, currency, amount):
             )
 
             sender_balance = await get_wallet_balance(sender_wallet.address, client)
-            db.upsert_cause_balance(sender_id, amount)
+            db.upsert_cause_balance(cause_id, amount)
 
             # Process disbursements to notify the donor in FIFO order
             disbursements = []
             try:
                 disbursements = process_disbursement(
-                    cause_id=beneficiary_id,
+                    cause_id=cause_id,
+                    sender_id=sender_id,
+                    beneficiary_id=beneficiary_id,
                     amount=amount,
                     transaction_hash=response.result['hash']
                 )
