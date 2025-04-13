@@ -67,7 +67,7 @@ interface ClickedState {
 }
 
 const CharityFlowVisualization: React.FC<{ graphData?: GraphData }> = ({ graphData: initialGraphData }) => {
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(!initialGraphData);
   const [graphData, setGraphData] = useState<GraphData | null>(initialGraphData || null);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [hoveredEdge, setHoveredEdge] = useState<string | null>(null);
@@ -209,7 +209,14 @@ const CharityFlowVisualization: React.FC<{ graphData?: GraphData }> = ({ graphDa
   };
 
   useEffect(() => {
-    // Simulate loading data
+    // Update graphData if initialGraphData changes
+    if (initialGraphData) {
+      setGraphData(initialGraphData);
+      setLoading(false);
+      return;
+    }
+    
+    // Simulate loading data for demo purposes only when no initialGraphData is provided
     const timer = setTimeout(() => {
       // Process the edge list to create graph data
       const mockEdgeList: MockEdge[] = [
@@ -377,7 +384,7 @@ const CharityFlowVisualization: React.FC<{ graphData?: GraphData }> = ({ graphDa
     }, 1500); // Simulate 1.5s loading time
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [initialGraphData]);
 
   // Calculate positions for nodes and edges
   const calculateLayout = (): Record<string, Position> => {
