@@ -109,14 +109,16 @@ class CauseDetailsResponse(BaseModel):
     donations: Optional[int] = 0
     raised: Optional[int] = 0
 
-class DonationDetailsResponse(BaseModel):
-    donation_id: str
-    customer_id: Optional[str]
-    cause_id: Optional[str]
-    amount: Optional[float] = 0
-    currency: Optional[str] = "RLUSD"
-    donation_date: Optional[datetime] = None
-    status: Optional[str] = "PENDING"
+class TransactionDetailsResponse(BaseModel):
+    transaction_hash: str
+    sender_id: str
+    sender_name: str
+    receiver_id: str
+    receiver_name: str
+    amount: float
+    currency: str
+    transaction_type: str
+    status: str
 
     class Config:
         from_attributes = True
@@ -361,32 +363,32 @@ async def get_cause_details(limit: Optional[int] = 10):
         logger.error(f"Error retrieving cause details: {e}")
         raise HTTPException(status_code=500, detail=f"Error retrieving cause details: {str(e)}")
 
-@app.get("/donations", response_model=List[DonationDetailsResponse])
-async def get_donations(cause_id: str):
+@app.get("/transactions/{customer_id}/{donor_id}", response_model=List[TransactionDetailsResponse])
+async def get_transactions(customer_id: str, donor_id: str):
     """Get all customer details with a left join between customers and customer_details tables."""
     try:
-        if cause_id:
-            donations = db.get_donation_by_cause_id(cause_id)
-        else:
-            donations = db.get_all_donations()
+        print(f"Getting transactions for customer {customer_id}")
+        transactions = db.get_customer_sent_transactions(customer_id, donor_id)
         
         # Convert to response format
         donation_dict = []
-        for donation in donations:
+        for transaction in transactions:
             donation_dict.append({
-                "donation_id": donation.donation_id,
-                "customer_id": donation.customer_id,
-                "cause_id": donation.cause_id,
-                "amount": donation.amount,
-                "currency": donation.currency,
-                "donation_date": donation.donation_date,
-                "status": donation.status
+                "transaction_hash": transaction.transaction_hash,
+                "sender_id": transaction.sender_id,
+                "sender_name": transaction.sender_name,
+                "receiver_id": transaction.receiver_id,
+                "receiver_name": transaction.receiver_name,
+                "amount": transaction.amount,
+                "currency": transaction.currency,
+                "transaction_type": transaction.transaction_type,
+                "status": transaction.status
             })
         
         return donation_dict
     except Exception as e:
-        logger.error(f"Error retrieving cause details: {e}")
-        raise HTTPException(status_code=500, detail=f"Error retrieving cause details: {str(e)}")
+        logger.error(f"Error retrieving transactions: {e}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving transactions: {str(e)}")
 
 @app.get("/customers", response_model=CustomersResponse)
 async def get_all_customers():

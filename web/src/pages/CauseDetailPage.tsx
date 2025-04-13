@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import {  } from 'react-router-dom';
 import './CauseDetailPage.css';
 
 // Components
@@ -10,11 +9,13 @@ import CharityFlowGraph from '../components/CharityFlowGraph';
 
 // Utils
 import { formatCurrency, calculatePercentage, formatDate, getShareableUrl, getSocialShareUrls, image } from '../utils/helpers';
+import CharityFlowVisualization from '../components/CharityFlowVisualization';
 
 // Define the Cause interface for type safety
 export interface Cause {
   cause_id: string;
   name: string;
+  customer_id: string;
   description: string;
   goal: number;
   raised: number;
@@ -42,23 +43,59 @@ interface RelatedCause {
   category: string;
 }
 
-interface Donation {
-  donation_id: string;
-  customer_id: string;
-  cause_id: string;
+interface Transaction {
+  transaction_hash: string;
+  sender_id: string;
+  sender_name: string;
+  receiver_id: string;
+  receiver_name: string;
   amount: number;
   currency: string;
+  transaction_type: string;
+  status: string;
+}
+
+// For CharityFlowVisualization
+interface GraphData {
+  nodes: {
+    id: string;
+    name: string;
+    level: number;
+    totalOutgoing?: number;
+    totalIncoming?: number;
+  }[];
+  edges: {
+    source: string;
+    target: string;
+    amount: number;
+    label: string;
+    rawAmount: string;
+    hashes: string[];
+  }[];
+  levels: {
+    [key: string]: any[];
+  };
 }
 
 // Mock data for fund allocation
 const fundAllocation = [
-  { category: "Emergency Shelter", allocation: "30%" },
-  { category: "Clean Water & Sanitation", allocation: "20%" },
-  { category: "Food & Nutrition", allocation: "20%" },
-  { category: "Medical Aid", allocation: "15%" },
-  { category: "Local Logistics", allocation: "10%" },
-  { category: "Operational Support", allocation: "5%" }
+  { category: "Emergency Response", allocation: "45%" },
+  { category: "Medical Supplies", allocation: "30%" },
+  { category: "Temporary Housing", allocation: "15%" },
+  { category: "Administrative", allocation: "10%" }
 ];
+
+// Mock data for about organization
+const aboutOrg = {
+  name: "ShelterNow",
+  differentiators: [
+    "100% transparency with blockchain-tracked fund distribution",
+    "90% of donations go directly to on-the-ground operations",
+    "Local partnership model that builds community capacity",
+    "Sustainable rebuilding practices with environmental considerations"
+  ],
+  description: "ShelterNow specializes in post-disaster recovery and sustainable rebuilding efforts. Our organization works directly with local communities to rebuild homes using local labor and sustainable materials.\n\nBy tracking every dollar on the blockchain, we provide unprecedented transparency to donors. You can see exactly where your contribution goes and how it makes an impact."
+};
 
 // Mock data for testimonials
 const testimonials = [
@@ -72,57 +109,6 @@ const testimonials = [
   }
 ];
 
-// Organization info
-const aboutOrg = {
-  name: "Global Relief Network",
-  differentiators: [
-    "24-hour emergency response in 97% of deployments",
-    "97 cents of every dollar goes directly to field operations",
-    "Uses blockchain verification for transparent fund tracking",
-    "Local partnerships in 43 countries ensure culturally-appropriate aid"
-  ],
-  description: "Global Relief Network was founded in 2005 by Dr. Sarah Chen, who witnessed firsthand the critical importance of rapid response after the Southeast Asian tsunami.\n\nToday, GRN operates with a network of over 5,000 trained emergency responders worldwide, ready to deploy within hours of a disaster. Our innovative use of technology - including drone surveys, satellite communications, and blockchain-verified supply chains - allows us to reach affected communities faster and more efficiently than traditional models.\n\nWe believe in a community-led approach, working alongside local partners to ensure aid is culturally appropriate, sustainable, and empowering rather than creating dependency."
-};
-
-// Fund flow visualization mock data
-const fundFlowData = {
-  source: {
-    name: "Global Charity",
-    id: "global-charity"
-  },
-  intermediary: {
-    name: "Global Relief Disaster Response",
-    id: "global-relief"
-  },
-  destinations: [
-    {
-      name: "Relief Riders Kenya",
-      id: "relief-riders",
-      percentage: 25
-    },
-    {
-      name: "CleanWater Uganda",
-      id: "cleanwater",
-      percentage: 20
-    },
-    {
-      name: "ShelterNow Nairobi",
-      id: "shelternow",
-      percentage: 30
-    },
-    {
-      name: "Mobile Medics Africa",
-      id: "mobile-medics",
-      percentage: 15
-    },
-    {
-      name: "Unknown Address",
-      id: "unknown",
-      percentage: 10
-    }
-  ]
-};
-
 const CauseDetailPage: React.FC = () => {
   const params = useParams();
   const [cause, setCause] = useState<Cause | null>(null);
@@ -130,19 +116,108 @@ const CauseDetailPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'story' | 'updates'>('story');
   const [donation, setDonation] = useState<string>('');
   const [showConfirmationModal, setShowConfirmationModal] = useState<boolean>(false);
-  const [donations, setDonations] = useState<Donation[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [donorGraphData, setDonorGraphData] = useState<GraphData | null>(null);
+  
   const fetchCause = async (causeId: string): Promise<Cause> => {
     // In a real application, this would be an API call
-    
-  return fetch(`http://localhost:8000/causes/${causeId}`)
-    .then(response => response.json())
+    return fetch(`http://localhost:8000/causes/${causeId}`)
+      .then(response => response.json())
   };
 
-  const fetchDonations = async (causeId: string): Promise<Donation[]> => {
+  const fetchTransactions = async (customer_id: string, donor_id: string): Promise<Transaction[]> => {
     // In a real application, this would be an API call
+    return fetch(`http://localhost:8000/transactions/${customer_id}/${donor_id}`)
+      .then(response => response.json())
+  };
+
+  // Function to format transactions into GraphData for CharityFlowVisualization
+  const formatTransactionsToGraphData = (transactions: Transaction[]): GraphData => {
+    // Map to keep track of unique nodes
+    const nodesMap = new Map();
     
-  return fetch(`http://localhost:8000/donations?cause_id=${causeId}`)
-    .then(response => response.json())
+    // Create a donor node (always level 0)
+    nodesMap.set("donor-1", {
+      id: "donor-1",
+      name: "You (Donor)",
+      level: 0,
+      totalOutgoing: 0
+    });
+
+    // Create organization node (level 1)
+    if (cause) {
+      nodesMap.set(cause.customer_id, {
+        id: cause.customer_id,
+        name: cause.name || "Organization",
+        level: 1,
+        totalIncoming: 0,
+        totalOutgoing: 0
+      });
+    }
+
+    // Add all receivers as nodes (level 2)
+    transactions.forEach(tx => {
+      if (!nodesMap.has(tx.receiver_id) && tx.receiver_id !== cause?.customer_id) {
+        nodesMap.set(tx.receiver_id, {
+          id: tx.receiver_id,
+          name: tx.receiver_name,
+          level: 2,
+          totalIncoming: 0
+        });
+      }
+    });
+
+    // Create edges from transactions
+    const edges = transactions.map(tx => {
+      // Calculate total amounts for nodes
+      const sourceNode = nodesMap.get(tx.sender_id);
+      const targetNode = nodesMap.get(tx.receiver_id);
+      
+      if (sourceNode) {
+        sourceNode.totalOutgoing = (sourceNode.totalOutgoing || 0) + tx.amount;
+      }
+      
+      if (targetNode) {
+        targetNode.totalIncoming = (targetNode.totalIncoming || 0) + tx.amount;
+      }
+      
+      return {
+        source: tx.sender_id,
+        target: tx.receiver_id,
+        amount: tx.amount,
+        label: `${tx.amount.toFixed(1)} ${tx.currency}`,
+        rawAmount: `${tx.amount} ${tx.currency}`,
+        hashes: [tx.transaction_hash]
+      };
+    });
+
+    // Group nodes by level
+    const levels: { [key: string]: any[] } = {};
+    nodesMap.forEach((node) => {
+      const levelKey = node.level.toString();
+      if (!levels[levelKey]) {
+        levels[levelKey] = [];
+      }
+      levels[levelKey].push(node);
+    });
+
+    // If no real transactions, add a default edge from donor to organization
+    if (edges.length === 0 && cause) {
+      edges.push({
+        source: "donor-1",
+        target: cause.customer_id,
+        amount: 0,
+        label: "0.0 RLUSD",
+        rawAmount: "0 RLUSD",
+        hashes: ["pending-transaction"]
+      });
+    }
+
+    return {
+      nodes: Array.from(nodesMap.values()),
+      edges,
+      levels
+    };
   };
 
   useEffect(() => {
@@ -162,22 +237,20 @@ const CauseDetailPage: React.FC = () => {
     if (donation) {
       setShowConfirmationModal(true);
     }
-    fetchDonations(cause?.cause_id || '').then(donations => {
-      console.log(donations);
-      setDonations(donations);
-    }).catch(error => {
-      console.error('Error fetching donations:', error);
-    });
   }, [donation]);
 
   useEffect(() => {
-    fetchDonations(cause?.cause_id || '').then(donations => {
-      console.log(donations);
-      setDonations(donations);
-    }).catch(error => {
-      console.error('Error fetching donations:', error);
-    });
-  }, [cause?.cause_id]);
+    if (cause?.customer_id) {
+      fetchTransactions(cause.customer_id, "donor-1").then(transactions => {
+        setTransactions(transactions);
+        // Format transactions into GraphData
+        const graphData = formatTransactionsToGraphData(transactions);
+        setDonorGraphData(graphData);
+      }).catch(error => {
+        console.error('Error fetching transactions:', error);
+      });
+    }
+  }, [cause?.customer_id]);
 
   const handleDonationSubmit = (amount: number, cause_id: string, customer_id: string) => {
     // In a real app, this would submit to a payment processor
@@ -261,7 +334,7 @@ const CauseDetailPage: React.FC = () => {
               <div className="cause-category">
                 <span>{cause.category}</span>
               </div>
-              <h1 className="cause-title">{cause.name || ' BLAH!!!!'}</h1>
+              <h1 className="cause-title">{cause.name}</h1>
               <p className="cause-description">{cause.description}</p>
             </div>
 
@@ -361,11 +434,21 @@ const CauseDetailPage: React.FC = () => {
                   ) : (
                     <>
                       <p>{cause.description}</p>
-                      <h2 className="section-title">Fund Distribution Visualization</h2>
+                      <h2 className="section-title">Where does the money go?</h2>
                       <p>This interactive visualization shows how funds flow from donors through our organization to the local charities on the ground.</p>
                       
                       <div className="fund-flow-visualization">
-                        <CharityFlowGraph data={fundFlowData} />
+                        <CharityFlowVisualization />
+                      </div>
+
+                      <h2 className="section-title">Your Impact</h2>
+                      <p>See how your donations directly impact communities in need. Every transaction is tracked on the blockchain for complete transparency.</p>
+ 
+                      <h2 className="section-title">Where has my money gone?</h2>
+                      <p>This visualization shows the flow of your specific donations through our organization to the local partners on the ground. Each node represents an organization, and each line represents a transaction that has been permanently recorded on the blockchain.</p>
+                      
+                      <div className="fund-flow-visualization">
+                        {donorGraphData && <CharityFlowVisualization graphData={donorGraphData} />}
                       </div>
                     </>
                   )}

@@ -6,7 +6,7 @@ from typing import Optional, List, Dict
 from enum import Enum
 from sqlalchemy import create_engine, Column, String, ForeignKey, Enum as SQLEnum, Numeric, event, DateTime, Integer, Float, Boolean
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.orm import sessionmaker, relationship, aliased
 from sqlalchemy.engine import Engine
 from config.logger_config import setup_logger
 from datetime import datetime
@@ -516,6 +516,55 @@ class Database:
             return sent + received
         finally:
             session.close()
+
+    def get_customer_sent_transactions(self, customer_id: str, donor_id: str) -> List[Transaction]:
+        """
+        Get all transactions for a customer (both sent and received).
+        
+        Args:
+            customer_id: ID of the customer
+            
+        Returns:
+            List of transactions
+        """
+        session = self.Session()
+        try:
+            # Join with Customer table twice to get both sender and receiver names
+            sender_alias = aliased(Customer)
+            receiver_alias = aliased(Customer)
+            print(f"Sender alias: {sender_alias}")
+            print(f"Receiver alias: {receiver_alias}") 
+            
+            stmt = select(
+                Transaction.transaction_hash,
+                Transaction.sender_id,
+                Transaction.receiver_id,
+                Transaction.amount,
+                Transaction.currency,
+                Transaction.transaction_type,
+                Transaction.status,
+                sender_alias.customer_name.label('sender_name'),
+                receiver_alias.customer_name.label('receiver_name')
+            ).select_from(
+                Transaction.__table__
+            ).join(
+                sender_alias,
+                Transaction.sender_id == sender_alias.customer_id
+            ).join(
+                receiver_alias,
+                Transaction.receiver_id == receiver_alias.customer_id
+            ).join(
+                DisbursementsDonations,
+                DisbursementsDonations.disbursement_id == Transaction.transaction_hash
+            ).filter(
+                DisbursementsDonations.donor_id == donor_id
+            )
+            print(f"Stmt: {stmt}")
+            transactions = session.execute(stmt).fetchall()
+            print(f"Transactions: {transactions}")
+            return transactions
+        finally:
+            session.close()
     
     def get_customer_seed(self, customer_id: str) -> str:
         """
@@ -701,6 +750,13 @@ class Database:
         """
         session = self.Session()
         return session.query(Donations).all()
+    
+    def get_all_transactions(self, customer_id: str) -> List[Transaction]:
+        """
+        Get all transactions for a customer.
+        """
+        session = self.Session()
+        return session.query(Transaction).filter_by(sender_id=customer_id).all()
 
     def get_cause_from_address(self, wallet_address: str) -> Optional[Cause]:
         """
@@ -796,7 +852,6 @@ class Database:
         ).group_by(Cause.cause_id).where(Cause.cause_id == cause_id)
         try:
             cause = session.execute(stmt).fetchone()
-            print(f"Cause: {cause}")
             return cause
         finally:
             session.close()
